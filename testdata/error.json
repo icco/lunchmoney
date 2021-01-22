@@ -1,0 +1,1 @@
+{ "error": "end_date cannot be same or before start_date" }

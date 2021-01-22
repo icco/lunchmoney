@@ -1,6 +1,6 @@
 package lunchmoney
 
-// PlaidAccountResponse is a single plaid account response.
+// PlaidAccountResponse is a list plaid accounts response.
 type PlaidAccountResponse struct {
 	Error         string          `json:"error"`
 	PlaidAccounts []*PlaidAccount `json:"plaid_accounts"`

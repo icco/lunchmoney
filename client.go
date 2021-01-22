@@ -35,7 +35,7 @@ type Client struct {
 	Base *url.URL
 }
 
-// NewClient creates a new client with the specified API keu
+// NewClient creates a new client with the specified API key.
 func NewClient(apikey string) (*Client, error) {
 	base, err := url.Parse(BaseAPIURL)
 	if err != nil {

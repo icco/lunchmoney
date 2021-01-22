@@ -1,6 +1,8 @@
 package lunchmoney
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -46,4 +48,41 @@ func (t *Transaction) ParsedAmount() (currency.Amount, error) {
 	}
 
 	return cur.Amount(f), nil
+}
+
+type TransactionFilters struct {
+	TagID           int64     `json:"tag_id"`
+	RecurringID     int64     `json:"recurring_id"`
+	PlaidAccountID  int64     `json:"plaid_account_id"`
+	CategoryID      int64     `json:"category_id"`
+	AssetID         int64     `json:"asset_id"`
+	Offset          int64     `json:"offset"`
+	Limit           int64     `json:"limit"`
+	StartDate       time.Time `json:"start_date"`
+	EndDate         time.Time `json:"end_date"`
+	DebitAsNegative bool      `json:"debit_as_negative"`
+}
+
+// GetTransactions gets all transactions filtered by the filters.
+func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilters) ([]*Transaction, error) {
+	options := map[string]string{}
+	if filters != nil {
+		// TODO: Turn filters into map.
+	}
+
+	body, err := c.Get(ctx, "/transactions", options)
+	if err != nil {
+		return nil, fmt.Errorf("get transactions: %w", err)
+	}
+
+	resp := &TransactionsResponse{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	if resp.Error != "" {
+		return nil, fmt.Errorf("bad request: %q", resp.Error)
+	}
+
+	return resp.Transactions, nil
 }

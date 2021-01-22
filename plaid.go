@@ -1,5 +1,7 @@
 package lunchmoney
 
+import "time"
+
 // PlaidAccountResponse is a list plaid accounts response.
 type PlaidAccountResponse struct {
 	Error         string          `json:"error"`

@@ -38,8 +38,8 @@ func NewClient(apikey string) (*Client, error) {
 	}
 
 	return &Client{
-		hc: &http.Client{
-			Transport: &addHeaderTransport{T: http.DefaultTransport, Key: apikey},
+		Http: &http.Client{
+			Transport: &addAuthHeaderTransport{T: http.DefaultTransport, Key: apikey},
 		},
 		Base: base,
 	}, nil

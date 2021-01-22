@@ -8,11 +8,13 @@ import (
 	"golang.org/x/text/currency"
 )
 
+// TransactionsResponse is the response we get from requesting transactions.
 type TransactionsResponse struct {
 	Transactions []Transaction `json:"transactions"`
 	Error        string        `json:"error"`
 }
 
+// Transaction is a single LM transaction.
 type Transaction struct {
 	ID             int64     `json:"id"`
 	Date           time.Time `json:"date"`

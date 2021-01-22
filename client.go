@@ -8,6 +8,11 @@ import (
 	"net/url"
 )
 
+const (
+	// BaseAPIURL is the base url we use for all API requests.
+	BaseAPIURL = "https://dev.lunchmoney.app/v1/"
+)
+
 type addAuthHeaderTransport struct {
 	T   http.RoundTripper
 	Key string
@@ -26,19 +31,19 @@ func (adt *addAuthHeaderTransport) RoundTrip(req *http.Request) (*http.Response,
 
 // Client holds our base configuration for our LunchMoney client.
 type Client struct {
-	Http *http.Client
+	HTTP *http.Client
 	Base *url.URL
 }
 
 // NewClient creates a new client with the specified API keu
 func NewClient(apikey string) (*Client, error) {
-	base, err := url.Parse("https://dev.lunchmoney.app/v1/")
+	base, err := url.Parse(BaseAPIURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base URI: %w", err)
 	}
 
 	return &Client{
-		Http: &http.Client{
+		HTTP: &http.Client{
 			Transport: &addAuthHeaderTransport{T: http.DefaultTransport, Key: apikey},
 		},
 		Base: base,
@@ -65,7 +70,7 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 		URL:    u,
 	}
 
-	resp, err := c.Http.Do(req)
+	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}

@@ -10,8 +10,8 @@ import (
 
 // TransactionsResponse is the response we get from requesting transactions.
 type TransactionsResponse struct {
-	Transactions []Transaction `json:"transactions"`
-	Error        string        `json:"error"`
+	Transactions []*Transaction `json:"transactions"`
+	Error        string         `json:"error"`
 }
 
 // Transaction is a single LM transaction.

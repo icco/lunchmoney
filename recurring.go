@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-playground/validator/v10"
+	"golang.org/x/text/currency"
 )
 
 type RecurringExpensesResponse struct {
@@ -32,13 +34,59 @@ type RecurringExpense struct {
 	TransactionID  int64     `json:"transaction_id"`
 }
 
+// ParsedAmount turns the currency from lunchmoney into a Go currency.
+func (r *RecurringExpense) ParsedAmount() (currency.Amount, error) {
+	cur, err := currency.ParseISO(t.Currency)
+	if err != nil {
+		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", t.Currency, err)
+	}
+
+	f, err := strconv.ParseFloat(t.Amount, 64)
+	if err != nil {
+		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", t.Amount, err)
+	}
+
+	return cur.Amount(f), nil
+}
+
+type RecurringExpenseFilters struct {
+	StartDate       string `json:"start_date" validate:"datetime=2006-01-02"`
+	DebitAsNegative bool   `json:"debit_as_negative"`
+}
+
+func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+	b, err := json.Marshal(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(b, &ret); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
 // GetRecurringExpences gets all recurring expenses filtered by the filters.
-func (c *Client) GetRecurringExpenses(ctx context.Context) ([]*RecurringExpense, error) {
+func (c *Client) GetRecurringExpenses(ctx context.Context, filters *RecurringExpenseFilters) ([]*RecurringExpense, error) {
 	validate := validator.New()
 	options := map[string]string{}
-	body, err := c.Get(ctx, "/v1/transactions", options)
+	if r != nil {
+		if err := validate.Struct(filters); err != nil {
+			return nil, err
+		}
+
+		maps, err := r.tomap()
+		if err != nil {
+			return nil, err
+		}
+		options = maps
+	}
+
+	body, err := c.Get(ctx, "/v1/recurring_expenses", options)
 	if err != nil {
-		return nil, fmt.Errorf("get transactions: %w", err)
+		return nil, fmt.Errorf("get recurring expenses: %w", err)
 	}
 
 	resp := &RecurringExpensesResponse{}

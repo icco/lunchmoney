@@ -62,15 +62,34 @@ type TransactionFilters struct {
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 
+func (r *TransactionFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+	b, err := json.Marshal(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(b, &ret); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
 // GetTransactions gets all transactions filtered by the filters.
 func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilters) ([]*Transaction, error) {
 	validate := validator.New()
 	options := map[string]string{}
 	if filters != nil {
-		// TODO: Turn filters into map.
 		if err := validate.Struct(filters); err != nil {
 			return nil, err
 		}
+
+		maps, err := r.tomap()
+		if err != nil {
+			return nil, err
+		}
+		options = maps
 	}
 
 	body, err := c.Get(ctx, "/v1/transactions", options)

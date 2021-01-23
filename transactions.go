@@ -13,7 +13,6 @@ import (
 // TransactionsResponse is the response we get from requesting transactions.
 type TransactionsResponse struct {
 	Transactions []*Transaction `json:"transactions"`
-	Error        string         `json:"error"`
 }
 
 // Transaction is a single LM transaction.
@@ -84,13 +83,37 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	if resp.Error != "" {
-		return nil, fmt.Errorf("bad request: %q", resp.Error)
+	if err := validate.Struct(resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Transactions, nil
+}
+
+// GetTransaction gets a transaction by id.
+func (c *Client) GetTransaction(ctx context.Context, id int64, filters *TransactionFilters) (*Transaction, error) {
+	validate := validator.New()
+	options := map[string]string{}
+	if filters != nil {
+		// TODO: Turn filters into map.
+		if err := validate.Struct(filters); err != nil {
+			return nil, err
+		}
+	}
+
+	body, err := c.Get(ctx, fmt.Sprintf("/v1/transactions/%d", id), options)
+	if err != nil {
+		return nil, fmt.Errorf("get transaction %d: %w", id, err)
+	}
+
+	resp := &Transaction{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
 	if err := validate.Struct(resp); err != nil {
 		return nil, err
 	}
 
-	return resp.Transactions, nil
+	return resp, nil
 }

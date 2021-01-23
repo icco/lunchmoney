@@ -2,8 +2,10 @@ package lunchmoney
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 )
@@ -50,6 +52,10 @@ func NewClient(apikey string) (*Client, error) {
 	}, nil
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 // Get makes a request using the client to the path specified with the
 // key/value pairs specified in options. It returns the body of the response or
 // an error.
@@ -71,6 +77,18 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		var errResp *ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
+			return nil, err
+		}
+
+		if errResp.Error != "" {
+			return nil, fmt.Errorf("%s: %q", resp.Status, errResp.Error)
+		}
+	}
+	log.Printf("%+v", resp)
 
 	return resp.Body, nil
 }

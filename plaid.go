@@ -9,7 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// PlaidAccountResponse is a list plaid accounts response.
+// PlaidAccountsResponse is a list plaid accounts response.
 type PlaidAccountsResponse struct {
 	PlaidAccounts []*PlaidAccount `json:"plaid_accounts"`
 }

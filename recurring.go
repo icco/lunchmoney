@@ -11,10 +11,12 @@ import (
 	"golang.org/x/text/currency"
 )
 
+// RecurringExpensesResponse is the data struct we get back from a get request.
 type RecurringExpensesResponse struct {
 	RecurringExpenses []*RecurringExpense `json:"recurring_expenses"`
 }
 
+// RecurringExpense is like a transaction, but one that's scheduled to happen.
 type RecurringExpense struct {
 	ID             int64     `json:"id"`
 	StartDate      string    `json:"start_date" validate:"datetime=2006-01-02"`
@@ -49,11 +51,14 @@ func (r *RecurringExpense) ParsedAmount() (currency.Amount, error) {
 	return cur.Amount(f), nil
 }
 
+// RecurringExpenseFilters are options to pass to the request.
 type RecurringExpenseFilters struct {
 	StartDate       string `json:"start_date" validate:"datetime=2006-01-02"`
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 
+// ToMap converts the filters to a string map to be sent with the request as
+// GET parameters.
 func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 	b, err := json.Marshal(r)
@@ -68,7 +73,7 @@ func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetRecurringExpences gets all recurring expenses filtered by the filters.
+// GetRecurringExpenses gets all recurring expenses filtered by the filters.
 func (c *Client) GetRecurringExpenses(ctx context.Context, filters *RecurringExpenseFilters) ([]*RecurringExpense, error) {
 	validate := validator.New()
 	options := map[string]string{}

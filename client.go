@@ -51,6 +51,7 @@ func NewClient(apikey string) (*Client, error) {
 	}, nil
 }
 
+// ErrorResponse is json if we get an error from the LM API.
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

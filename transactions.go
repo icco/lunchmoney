@@ -49,6 +49,7 @@ func (t *Transaction) ParsedAmount() (currency.Amount, error) {
 	return cur.Amount(f), nil
 }
 
+// TransactionFilters are options to pass into the request for transactions.
 type TransactionFilters struct {
 	TagID           int64  `json:"tag_id"`
 	RecurringID     int64  `json:"recurring_id"`
@@ -62,6 +63,8 @@ type TransactionFilters struct {
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 
+// ToMap converts the filters to a string map to be sent with the request as
+// GET parameters.
 func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 	b, err := json.Marshal(r)

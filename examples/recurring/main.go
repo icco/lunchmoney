@@ -1,6 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"context"
+	"log"
+	"os"
+
+	"github.com/icco/lunchmoney"
+)
 
 func main() {
 	ctx := context.Background()

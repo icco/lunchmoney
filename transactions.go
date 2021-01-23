@@ -117,10 +117,15 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 	validate := validator.New()
 	options := map[string]string{}
 	if filters != nil {
-		// TODO: Turn filters into map.
 		if err := validate.Struct(filters); err != nil {
 			return nil, err
 		}
+
+		maps, err := filters.ToMap()
+		if err != nil {
+			return nil, err
+		}
+		options = maps
 	}
 
 	body, err := c.Get(ctx, fmt.Sprintf("/v1/transactions/%d", id), options)

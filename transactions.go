@@ -85,7 +85,7 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 			return nil, err
 		}
 
-		maps, err := r.tomap()
+		maps, err := filters.ToMap()
 		if err != nil {
 			return nil, err
 		}

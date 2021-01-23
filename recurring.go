@@ -36,14 +36,14 @@ type RecurringExpense struct {
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
 func (r *RecurringExpense) ParsedAmount() (currency.Amount, error) {
-	cur, err := currency.ParseISO(t.Currency)
+	cur, err := currency.ParseISO(r.Currency)
 	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", t.Currency, err)
+		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", r.Currency, err)
 	}
 
-	f, err := strconv.ParseFloat(t.Amount, 64)
+	f, err := strconv.ParseFloat(r.Amount, 64)
 	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", t.Amount, err)
+		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", r.Amount, err)
 	}
 
 	return cur.Amount(f), nil
@@ -72,12 +72,12 @@ func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 func (c *Client) GetRecurringExpenses(ctx context.Context, filters *RecurringExpenseFilters) ([]*RecurringExpense, error) {
 	validate := validator.New()
 	options := map[string]string{}
-	if r != nil {
+	if filters != nil {
 		if err := validate.Struct(filters); err != nil {
 			return nil, err
 		}
 
-		maps, err := r.tomap()
+		maps, err := filters.ToMap()
 		if err != nil {
 			return nil, err
 		}

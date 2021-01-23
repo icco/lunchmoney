@@ -10,7 +10,7 @@ import (
 
 const (
 	// BaseAPIURL is the base url we use for all API requests.
-	BaseAPIURL = "https://dev.lunchmoney.app/v1/"
+	BaseAPIURL = "https://dev.lunchmoney.app/"
 )
 
 type addAuthHeaderTransport struct {
@@ -54,22 +54,19 @@ func NewClient(apikey string) (*Client, error) {
 // key/value pairs specified in options. It returns the body of the response or
 // an error.
 func (c *Client) Get(ctx context.Context, path string, options map[string]string) (io.Reader, error) {
-	u, err := url.Parse(c.Base.String() + path)
+	u, err := url.Parse(c.Base.String())
 	if err != nil {
 		return nil, fmt.Errorf("bad path: %w", err)
 	}
 
+	u.Path = path
 	query := u.Query()
 	for k, v := range options {
 		query.Set(k, v)
 	}
 	u.RawQuery = query.Encode()
 
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL:    u,
-	}
-
+	req := &http.Request{Method: http.MethodGet, URL: u}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)

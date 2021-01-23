@@ -10,7 +10,7 @@ import (
 )
 
 type RecurringExpensesResponse struct {
-	RecurringExpenses []*RecurringExpenses `json:"recurring_expenses"`
+	RecurringExpenses []*RecurringExpense `json:"recurring_expenses"`
 }
 
 type RecurringExpense struct {
@@ -33,7 +33,7 @@ type RecurringExpense struct {
 }
 
 // GetRecurringExpences gets all recurring expenses filtered by the filters.
-func (c *Client) GetRecurringExpenses(ctx context.Context) ([]*Transaction, error) {
+func (c *Client) GetRecurringExpenses(ctx context.Context) ([]*RecurringExpense, error) {
 	validate := validator.New()
 	options := map[string]string{}
 	body, err := c.Get(ctx, "/v1/transactions", options)
@@ -50,5 +50,5 @@ func (c *Client) GetRecurringExpenses(ctx context.Context) ([]*Transaction, erro
 		return nil, err
 	}
 
-	return resp.Transactions, nil
+	return resp.RecurringExpenses, nil
 }

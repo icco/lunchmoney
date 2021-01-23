@@ -28,7 +28,7 @@ type Asset struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
-// GetAssets gets all transactions filtered by the filters.
+// GetAssets gets all assets filtered by the filters.
 func (c *Client) GetAssets(ctx context.Context) ([]*Asset, error) {
 	validate := validator.New()
 	options := map[string]string{}

@@ -18,7 +18,7 @@ type Tag struct {
 	Description string `json:"description"`
 }
 
-// GetTags gets all transactions filtered by the filters.
+// GetTags gets all tags filtered by the filters.
 func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 	validate := validator.New()
 	body, err := c.Get(ctx, "/v1/transactions", nil)

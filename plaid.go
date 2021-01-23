@@ -31,7 +31,7 @@ type PlaidAccount struct {
 	Limit             int64     `json:"limit"`
 }
 
-// GetPlaidAccounts gets all transactions filtered by the filters.
+// GetPlaidAccounts gets all plaid accounts filtered by the filters.
 func (c *Client) GetPlaidAccounts(ctx context.Context) ([]*PlaidAccount, error) {
 	validate := validator.New()
 	options := map[string]string{}

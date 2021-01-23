@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -88,7 +87,6 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 			return nil, fmt.Errorf("%s: %q", resp.Status, errResp.Error)
 		}
 	}
-	log.Printf("%+v", resp)
 
 	return resp.Body, nil
 }

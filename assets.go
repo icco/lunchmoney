@@ -11,7 +11,6 @@ import (
 
 // AssetsResponse is a response to an asset lookup.
 type AssetsResponse struct {
-	Error  string   `json:"error"`
 	Assets []*Asset `json:"assets"`
 }
 

@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/lunchmoney)](https://goreportcard.com/report/github.com/icco/lunchmoney)
 [![Build Status](https://travis-ci.com/icco/lunchmoney.svg?branch=main)](https://travis-ci.com/icco/lunchmoney)
 
-Go API wrapper for Lunch Money API
+Golang API wrapper for Lunch Money API
 
 To use this API, you need to create an API token by following the directions at [developers.lunchmoney.app](https://developers.lunchmoney.app/).
 

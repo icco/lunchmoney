@@ -95,6 +95,7 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	return resp.Body, nil
 }
 
+// ParseCurrency turns two strings into a money struct.
 func ParseCurrency(amount, currency string) (*money.Money, error) {
 	f, err := strconv.ParseFloat(amount, 64)
 	if err != nil {

@@ -21,7 +21,7 @@ type Tag struct {
 // GetTags gets all tags filtered by the filters.
 func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 	validate := validator.New()
-	body, err := c.Get(ctx, "/v1/transactions", nil)
+	body, err := c.Get(ctx, "/v1/tags", nil)
 	if err != nil {
 		return nil, fmt.Errorf("get transactions: %w", err)
 	}
@@ -31,9 +31,13 @@ func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	if err := validate.Struct(resp); err != nil {
-		return nil, err
+	ret := []*Tag(*resp)
+
+	for _, t := range ret {
+		if err := validate.Struct(t); err != nil {
+			return nil, err
+		}
 	}
 
-	return *resp, nil
+	return ret, nil
 }

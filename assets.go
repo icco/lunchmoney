@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
+	"github.com/Rhymond/go-money"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/text/currency"
 )
 
 // AssetsResponse is a response to an asset lookup.
@@ -31,18 +30,8 @@ type Asset struct {
 }
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
-func (a *Asset) ParsedAmount() (currency.Amount, error) {
-	cur, err := currency.ParseISO(a.Currency)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", a.Currency, err)
-	}
-
-	f, err := strconv.ParseFloat(a.Balance, 64)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", a.Balance, err)
-	}
-
-	return cur.Amount(f), nil
+func (a *Asset) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(a.Balance, a.Currency)
 }
 
 // GetAssets gets all assets filtered by the filters.

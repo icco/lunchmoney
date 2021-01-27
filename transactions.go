@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 
+	"github.com/Rhymond/go-money"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/text/currency"
 )
 
 // TransactionsResponse is the response we get from requesting transactions.
@@ -35,18 +34,8 @@ type Transaction struct {
 }
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
-func (t *Transaction) ParsedAmount() (currency.Amount, error) {
-	cur, err := currency.ParseISO(t.Currency)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", t.Currency, err)
-	}
-
-	f, err := strconv.ParseFloat(t.Amount, 64)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", t.Amount, err)
-	}
-
-	return cur.Amount(f), nil
+func (t *Transaction) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(t.Amount, t.Currency)
 }
 
 // TransactionFilters are options to pass into the request for transactions.

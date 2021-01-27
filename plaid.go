@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
+	"github.com/Rhymond/go-money"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/text/currency"
 )
 
 // PlaidAccountsResponse is a list plaid accounts response.
@@ -34,18 +33,8 @@ type PlaidAccount struct {
 }
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
-func (p *PlaidAccount) ParsedAmount() (currency.Amount, error) {
-	cur, err := currency.ParseISO(p.Currency)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", p.Currency, err)
-	}
-
-	f, err := strconv.ParseFloat(p.Balance, 64)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", p.Balance, err)
-	}
-
-	return cur.Amount(f), nil
+func (p *PlaidAccount) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(p.Balance, p.Currency)
 }
 
 // GetPlaidAccounts gets all plaid accounts filtered by the filters.

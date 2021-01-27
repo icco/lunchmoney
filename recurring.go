@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"time"
 
+	"github.com/Rhymond/go-money"
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/text/currency"
 )
 
 // RecurringExpensesResponse is the data struct we get back from a get request.
@@ -37,18 +36,8 @@ type RecurringExpense struct {
 }
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
-func (r *RecurringExpense) ParsedAmount() (currency.Amount, error) {
-	cur, err := currency.ParseISO(r.Currency)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid currency: %w", r.Currency, err)
-	}
-
-	f, err := strconv.ParseFloat(r.Amount, 64)
-	if err != nil {
-		return currency.Amount{}, fmt.Errorf("%q is not valid float: %w", r.Amount, err)
-	}
-
-	return cur.Amount(f), nil
+func (r *RecurringExpense) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(r.Amount, r.Currency)
 }
 
 // RecurringExpenseFilters are options to pass to the request.

@@ -8,6 +8,7 @@ on:
       - '**'
 jobs:
   release:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
       - uses: go-semantic-release/action@v1

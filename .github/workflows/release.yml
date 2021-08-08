@@ -6,9 +6,11 @@ on:
   pull_request:
     branches:
       - '**'
-steps:
-  - uses: actions/checkout@master
-  - uses: go-semantic-release/action@v1
-    with:
-      github-token: ${{ secrets.GITHUB_TOKEN }}
-      allow-initial-development-versions: true
+jobs:
+  release:
+    steps:
+      - uses: actions/checkout@master
+      - uses: go-semantic-release/action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          allow-initial-development-versions: true

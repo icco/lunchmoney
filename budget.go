@@ -1,38 +1,50 @@
 package lunchmoney
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/Rhymond/go-money"
 	"github.com/go-playground/validator/v10"
 )
 
-type BudgetsResponse struct {
-	Budgets []*Budget `json:"budgets"`
-}
-
 type Budget struct {
-	CategoryName      string                 `json:"category_name"`
+	CategoryGroupName string                 `json:"category_group_name,omitempty"`
 	CategoryID        int                    `json:"category_id"`
-	CategoryGroupName string                 `json:"category_group_name"`
-	GroupID           int                    `json:"group_id"`
-	IsGroup           bool                   `json:"is_group"`
-	IsIncome          bool                   `json:"is_income"`
+	CategoryName      string                 `json:"category_name"`
+	Data              map[string]*BudgetData `json:"data,omitempty" validate:"dive"`
 	ExcludeFromBudget bool                   `json:"exclude_from_budget"`
 	ExcludeFromTotals bool                   `json:"exclude_from_totals"`
-	Data              map[string]*BudgetData `json:"data"`
+	GroupID           int                    `json:"group_id"`
+	HasChildren       bool                   `json:"has_children,omitempty"`
+	IsGroup           bool                   `json:"is_group,omitempty"`
+	IsIncome          bool                   `json:"is_income"`
 	Order             int                    `json:"order"`
+	Recurring         Recurring              `json:"recurring,omitempty"`
+}
+
+type List struct {
+	Payee    string  `json:"payee"`
+	Amount   string  `json:"amount"`
+	Currency string  `json:"currency"`
+	ToBase   float64 `json:"to_base"`
+}
+
+type Recurring struct {
+	Sum  float64 `json:"sum"`
+	List []List  `json:"list"`
 }
 
 type BudgetData struct {
-	BudgetMonth     string  `json:"budget_month" validate:"datetime=2006-01-02"`
-	BudgetToBase    float64 `json:"budget_to_base"`
-	BudgetAmount    string  `json:"budget_amount"`
-	BudgetCurrency  string  `json:"budget_currency"`
-	SpendingToBase  float64 `json:"spending_to_base"`
-	NumTransactions int     `json:"num_transactions"`
+	BudgetMonth     string      `json:"budget_month,omitempty" validate:"datetime=2006-01-02"`
+	BudgetToBase    float64     `json:"budget_to_base,omitempty"`
+	BudgetAmount    json.Number `json:"budget_amount,omitempty"`
+	BudgetCurrency  string      `json:"budget_currency,omitempty"`
+	SpendingToBase  float64     `json:"spending_to_base,omitempty"`
+	NumTransactions int         `json:"num_transactions,omitempty"`
 }
 
 // BudgetFilters are options to pass into the request for budget history.
@@ -59,7 +71,7 @@ func (r *BudgetFilters) ToMap() (map[string]string, error) {
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
 func (b *BudgetData) ParsedAmount() (*money.Money, error) {
-	return ParseCurrency(b.BudgetAmount, b.BudgetCurrency)
+	return ParseCurrency(b.BudgetAmount.String(), b.BudgetCurrency)
 }
 
 // GetBudgets returns budgets within a time period.
@@ -67,7 +79,7 @@ func (c *Client) GetBudgets(ctx context.Context, filters *BudgetFilters) ([]*Bud
 	validate := validator.New()
 	options := map[string]string{}
 	if filters != nil {
-		if err := validate.Struct(filters); err != nil {
+		if err := validate.StructCtx(ctx, filters); err != nil {
 			return nil, err
 		}
 
@@ -83,14 +95,32 @@ func (c *Client) GetBudgets(ctx context.Context, filters *BudgetFilters) ([]*Bud
 		return nil, fmt.Errorf("get budgets: %w", err)
 	}
 
-	resp := &BudgetsResponse{}
-	if err := json.NewDecoder(body).Decode(resp); err != nil {
+	var resp []*Budget
+	var bodyCopy bytes.Buffer
+	tee := io.TeeReader(body, &bodyCopy)
+	if err := json.NewDecoder(tee).Decode(&resp); err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	if err := validate.Struct(resp); err != nil {
-		return nil, err
+	for _, b := range resp {
+		// Clean up sometimes bad data returned.
+		for k, bd := range b.Data {
+			if bd.BudgetMonth == "" {
+				bd.BudgetMonth = k
+			}
+		}
+
+		if err := validate.StructCtx(ctx, b); err != nil {
+			switch v := err.(type) {
+			case validator.ValidationErrors:
+				return nil, fmt.Errorf("validating response: %s", v.Error())
+			case *validator.InvalidValidationError:
+				return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+			default:
+				return nil, fmt.Errorf("validating response (%T): %w", err, v)
+			}
+		}
 	}
 
-	return resp.Budgets, nil
+	return resp, nil
 }

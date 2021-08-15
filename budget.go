@@ -35,17 +35,50 @@ type BudgetData struct {
 	NumTransactions int     `json:"num_transactions"`
 }
 
+// BudgetFilters are options to pass into the request for budget history.
+type BudgetFilters struct {
+	StartDate string `json:"start_date" validate:"datetime=2006-01-02,required"`
+	EndDate   string `json:"end_date" validate:"datetime=2006-01-02,required"`
+}
+
+// ToMap converts the filters to a string map to be sent with the request as
+// GET parameters.
+func (r *BudgetFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+	b, err := json.Marshal(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(b, &ret); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
 // ParsedAmount turns the currency from lunchmoney into a Go currency.
 func (b *BudgetData) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(b.BudgetAmount, b.BudgetCurrency)
 }
 
 // GetBudgets returns budgets within a time period.
-//
-// TODO: Figure out what the arguments are for this call. Undocumented.
-func (c *Client) GetBudgets(ctx context.Context) ([]*Budget, error) {
+func (c *Client) GetBudgets(ctx context.Context, filters *BudgetFilters) ([]*Budget, error) {
 	validate := validator.New()
-	body, err := c.Get(ctx, "/v1/budgets", nil)
+	options := map[string]string{}
+	if filters != nil {
+		if err := validate.Struct(filters); err != nil {
+			return nil, err
+		}
+
+		maps, err := filters.ToMap()
+		if err != nil {
+			return nil, err
+		}
+		options = maps
+	}
+
+	body, err := c.Get(ctx, "/v1/budgets", options)
 	if err != nil {
 		return nil, fmt.Errorf("get budgets: %w", err)
 	}

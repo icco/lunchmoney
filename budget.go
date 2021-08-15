@@ -29,7 +29,7 @@ type Budget struct {
 type BudgetData struct {
 	BudgetMonth     string  `json:"budget_month" validate:"datetime=2006-01-02"`
 	BudgetToBase    float64 `json:"budget_to_base"`
-	BudgetAmount    float64 `json:"budget_amount"`
+	BudgetAmount    string  `json:"budget_amount"`
 	BudgetCurrency  string  `json:"budget_currency"`
 	SpendingToBase  float64 `json:"spending_to_base"`
 	NumTransactions int     `json:"num_transactions"`
@@ -45,7 +45,7 @@ func (b *BudgetData) ParsedAmount() (*money.Money, error) {
 // TODO: Figure out what the arguments are for this call. Undocumented.
 func (c *Client) GetBudgets(ctx context.Context) ([]*Budget, error) {
 	validate := validator.New()
-	body, err := c.Get(ctx, "/v1/budgets", options)
+	body, err := c.Get(ctx, "/v1/budgets", nil)
 	if err != nil {
 		return nil, fmt.Errorf("get budgets: %w", err)
 	}

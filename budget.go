@@ -11,6 +11,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// Budget defines a categories budget over time.
 type Budget struct {
 	CategoryGroupName string                 `json:"category_group_name,omitempty"`
 	CategoryID        int                    `json:"category_id"`
@@ -23,21 +24,18 @@ type Budget struct {
 	IsGroup           bool                   `json:"is_group,omitempty"`
 	IsIncome          bool                   `json:"is_income"`
 	Order             int                    `json:"order"`
-	Recurring         Recurring              `json:"recurring,omitempty"`
+	Recurring         struct {
+		Sum  float64 `json:"sum"`
+		List []struct {
+			Payee    string  `json:"payee"`
+			Amount   string  `json:"amount"`
+			Currency string  `json:"currency"`
+			ToBase   float64 `json:"to_base"`
+		} `json:"list"`
+	} `json:"recurring,omitempty"`
 }
 
-type List struct {
-	Payee    string  `json:"payee"`
-	Amount   string  `json:"amount"`
-	Currency string  `json:"currency"`
-	ToBase   float64 `json:"to_base"`
-}
-
-type Recurring struct {
-	Sum  float64 `json:"sum"`
-	List []List  `json:"list"`
-}
-
+// BudgetData is a single month's budget for a category.
 type BudgetData struct {
 	BudgetMonth     string      `json:"budget_month,omitempty" validate:"datetime=2006-01-02"`
 	BudgetToBase    float64     `json:"budget_to_base,omitempty"`

@@ -1,6 +1,7 @@
 package lunchmoney
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -56,7 +57,25 @@ func NewClient(apikey string) (*Client, error) {
 
 // ErrorResponse is json if we get an error from the LM API.
 type ErrorResponse struct {
-	Error string `json:"error"`
+	ErrorString   string `json:"error,omitempty"`
+	ErrorName     string `json:"name,omitempty"`
+	MessageString string `json:"message,omitempty"`
+}
+
+func (e *ErrorResponse) Error() string {
+	if e.ErrorString != "" {
+		return e.ErrorString
+	}
+
+	if e.MessageString != "" {
+		return e.MessageString
+	}
+
+	if e.ErrorName != "" {
+		return e.ErrorName
+	}
+
+	return ""
 }
 
 // Get makes a request using the client to the path specified with the
@@ -82,14 +101,19 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		var errResp *ErrorResponse
-		if err := json.NewDecoder(resp.Body).Decode(errResp); err != nil {
-			return nil, err
+		var buf bytes.Buffer
+		tee := io.TeeReader(resp.Body, &buf)
+		errResp := ErrorResponse{}
+		if err := json.NewDecoder(tee).Decode(&errResp); err != nil {
+			return nil, fmt.Errorf("could not decode error response %s: %w", buf.String(), err)
 		}
 
-		if errResp.Error != "" {
-			return nil, fmt.Errorf("%s: %q", resp.Status, errResp.Error)
+		// log.Printf("%s -> %+v", buf.String(), errResp)
+		if errResp.Error() != "" {
+			return nil, fmt.Errorf("%s: %s", resp.Status, errResp.Error())
 		}
+
+		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
 	return resp.Body, nil

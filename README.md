@@ -11,4 +11,4 @@ To use this API, you need to create an API token by following the directions at 
 ## Notes
 
  - We currently only support read only requests. We'd love a PR to add support for write though!
- - We currently only support Go 1.15 and greater.
+ - We currently only support Go 1.14 and greater.

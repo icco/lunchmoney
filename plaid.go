@@ -18,7 +18,7 @@ type PlaidAccountsResponse struct {
 // PlaidAccount is a single LM Plaid account.
 type PlaidAccount struct {
 	ID                int64     `json:"id"`
-	DateLinked        time.Time `json:"date_linked"`
+	DateLinked        string    `json:"date_linked"`
 	Name              string    `json:"name"`
 	Type              string    `json:"type"`
 	Subtype           string    `json:"subtype"`

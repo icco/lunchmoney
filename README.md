@@ -1,7 +1,7 @@
 # lunchmoney
 
-[![GoDoc](https://godoc.org/github.com/icco/lunchmoney?status.svg)](https://godoc.org/github.com/icco/lunchmoney)
-[![Go Report Card](https://goreportcard.com/badge/github.com/icco/lunchmoney)](https://goreportcard.com/report/github.com/icco/lunchmoney)
+[![GoDoc](https://godoc.org/github.com/rshep3087/lunchmoney?status.svg)](https://godoc.org/github.com/rshep3087/lunchmoney)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rshep3087/lunchmoney)](https://goreportcard.com/report/github.com/rshep3087/lunchmoney)
 [![Build Status](https://travis-ci.com/icco/lunchmoney.svg?branch=main)](https://travis-ci.com/icco/lunchmoney)
 
 Golang API wrapper for Lunch Money API

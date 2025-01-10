@@ -1,4 +1,4 @@
-module github.com/icco/lunchmoney
+module github.com/rshep3087/lunchmoney
 
 go 1.15
 

@@ -29,7 +29,7 @@ func (adt *addAuthHeaderTransport) RoundTrip(req *http.Request) (*http.Response,
 	}
 
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", adt.Key))
-	req.Header.Add("User-Agent", "github.com/icco/lunchmoney/0.0.0")
+	req.Header.Add("User-Agent", "github.com/rshep3087/lunchmoney/0.0.0")
 
 	return adt.T.RoundTrip(req)
 }

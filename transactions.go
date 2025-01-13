@@ -146,25 +146,26 @@ type UpdateTransaction struct {
 	ExternalID  *string `json:"external_id,omitempty"`
 }
 
-func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) error {
+type UpdateTransactionResp struct {
+	Updated bool  `json:"updated"`
+	Split   []int `json:"split"`
+}
+
+func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) (*UpdateTransactionResp, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(ut); err != nil {
-		return err
+		return nil, err
 	}
 
 	body, err := c.Put(ctx, fmt.Sprintf("/v1/transactions/%d", id), ut)
 	if err != nil {
-		return fmt.Errorf("update transaction %d: %w", id, err)
+		return nil, fmt.Errorf("update transaction %d: %w", id, err)
 	}
 
-	resp := &Transaction{}
+	resp := &UpdateTransactionResp{}
 	if err := json.NewDecoder(body).Decode(resp); err != nil {
-		return fmt.Errorf("decode response: %w", err)
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	if err := validate.Struct(resp); err != nil {
-		return err
-	}
-
-	return nil
+	return resp, nil
 }

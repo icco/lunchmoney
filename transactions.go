@@ -133,3 +133,38 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 
 	return resp, nil
 }
+
+type UpdateTransaction struct {
+	Date        string  `json:"date,omitempty" validate:"datetime=2006-01-02"`       // Optional, with omitempty
+	CategoryID  *int    `json:"category_id,omitempty"`                               // Optional, with omitempty
+	Payee       *string `json:"payee,omitempty"`                                     // Optional, with omitempty
+	Currency    *string `json:"currency,omitempty"`                                  // Optional, with omitempty
+	AssetID     *int    `json:"asset_id,omitempty"`                                  // Optional, with omitempty
+	RecurringID *int    `json:"recurring_id,omitempty"`                              // Optional, with omitempty
+	Notes       *string `json:"notes,omitempty"`                                     // Optional, with omitempty
+	Status      *string `json:"status,omitempty" validate:"oneof=cleared uncleared"` // Defaults to uncleared, with omitempty
+	ExternalID  *string `json:"external_id,omitempty"`                               // Optional, with omitempty
+}
+
+func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(ut); err != nil {
+		return err
+	}
+
+	body, err := c.Put(ctx, fmt.Sprintf("/v1/transactions/%d", id), ut)
+	if err != nil {
+		return fmt.Errorf("update transaction %d: %w", id, err)
+	}
+
+	resp := &Transaction{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return fmt.Errorf("decode response: %w", err)
+	}
+
+	if err := validate.Struct(resp); err != nil {
+		return err
+	}
+
+	return nil
+}

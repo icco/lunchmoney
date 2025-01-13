@@ -119,6 +119,44 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	return resp.Body, nil
 }
 
+func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Reader, error) {
+	u, err := url.Parse(c.Base.String())
+	if err != nil {
+		return nil, fmt.Errorf("bad path: %w", err)
+	}
+
+	u.Path = path
+
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("could not marshal body: %w", err)
+	}
+
+	req := &http.Request{Method: http.MethodPut, URL: u, Body: io.NopCloser(bytes.NewReader(b))}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		var buf bytes.Buffer
+		tee := io.TeeReader(resp.Body, &buf)
+		errResp := ErrorResponse{}
+		if err := json.NewDecoder(tee).Decode(&errResp); err != nil {
+			return nil, fmt.Errorf("could not decode error response %s: %w", buf.String(), err)
+		}
+
+		// log.Printf("%s -> %+v", buf.String(), errResp)
+		if errResp.Error() != "" {
+			return nil, fmt.Errorf("%s: %s", resp.Status, errResp.Error())
+		}
+
+		return nil, fmt.Errorf("%s", resp.Status)
+	}
+
+	return resp.Body, nil
+}
+
 // ParseCurrency turns two strings into a money struct.
 func ParseCurrency(amount, currency string) (*money.Money, error) {
 	f, err := strconv.ParseFloat(amount, 64)

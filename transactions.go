@@ -135,15 +135,15 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 }
 
 type UpdateTransaction struct {
-	Date        string  `json:"date,omitempty" validate:"datetime=2006-01-02"`       // Optional, with omitempty
-	CategoryID  *int    `json:"category_id,omitempty"`                               // Optional, with omitempty
-	Payee       *string `json:"payee,omitempty"`                                     // Optional, with omitempty
-	Currency    *string `json:"currency,omitempty"`                                  // Optional, with omitempty
-	AssetID     *int    `json:"asset_id,omitempty"`                                  // Optional, with omitempty
-	RecurringID *int    `json:"recurring_id,omitempty"`                              // Optional, with omitempty
-	Notes       *string `json:"notes,omitempty"`                                     // Optional, with omitempty
-	Status      *string `json:"status,omitempty" validate:"oneof=cleared uncleared"` // Defaults to uncleared, with omitempty
-	ExternalID  *string `json:"external_id,omitempty"`                               // Optional, with omitempty
+	Date        *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`
+	CategoryID  *int    `json:"category_id,omitempty"`
+	Payee       *string `json:"payee,omitempty"`
+	Currency    *string `json:"currency,omitempty"`
+	AssetID     *int    `json:"asset_id,omitempty"`
+	RecurringID *int    `json:"recurring_id,omitempty"`
+	Notes       *string `json:"notes,omitempty"`
+	Status      *string `json:"status,omitempty" validate:"omitnil,oneof=cleared uncleared"`
+	ExternalID  *string `json:"external_id,omitempty"`
 }
 
 func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) error {

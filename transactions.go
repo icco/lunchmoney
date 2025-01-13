@@ -17,7 +17,7 @@ type TransactionsResponse struct {
 // Transaction is a single LM transaction.
 type Transaction struct {
 	ID             int64  `json:"id"`
-	Date           string `json:"date" validate:"datetime=2006-01-02"`
+	Date           string `json:"date" validate:"omitempty,datetime=2006-01-02"`
 	Payee          string `json:"payee"`
 	Amount         string `json:"amount"`
 	Currency       string `json:"currency"`

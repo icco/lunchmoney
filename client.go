@@ -133,6 +133,8 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 	}
 
 	req := &http.Request{Method: http.MethodPut, URL: u, Body: io.NopCloser(bytes.NewReader(b))}
+	req.Header.Add("Content-Type", "application/json")
+
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)

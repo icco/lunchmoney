@@ -134,6 +134,7 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 	return resp, nil
 }
 
+// UpdateTransaction is the transaction to update.
 type UpdateTransaction struct {
 	Date        *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`
 	CategoryID  *int    `json:"category_id,omitempty"`
@@ -146,6 +147,12 @@ type UpdateTransaction struct {
 	ExternalID  *string `json:"external_id,omitempty"`
 }
 
+// UpdateRequest is the request to update a transaction.
+type UpdateRequest struct {
+	Transaction *UpdateTransaction `json:"transaction"`
+}
+
+// UpdateTransactionResp is the response we get from updating a transaction.
 type UpdateTransactionResp struct {
 	Updated bool  `json:"updated"`
 	Split   []int `json:"split"`
@@ -157,7 +164,7 @@ func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTran
 		return nil, err
 	}
 
-	body, err := c.Put(ctx, fmt.Sprintf("/v1/transactions/%d", id), ut)
+	body, err := c.Put(ctx, fmt.Sprintf("/v1/transactions/%d", id), &UpdateRequest{Transaction: ut})
 	if err != nil {
 		return nil, fmt.Errorf("update transaction %d: %w", id, err)
 	}

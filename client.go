@@ -132,9 +132,12 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 		return nil, fmt.Errorf("could not marshal body: %w", err)
 	}
 
-	req := &http.Request{Method: http.MethodPut, URL: u, Body: io.NopCloser(bytes.NewReader(b))}
-	req.Header.Add("Content-Type", "application/json")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, u.String(), bytes.NewReader(b))
+	if err != nil {
+		return nil, fmt.Errorf("could not create request: %w", err)
+	}
 
+	req.Header.Add("Content-Type", "application/json")
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)

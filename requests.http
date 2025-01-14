@@ -2,6 +2,10 @@ GET https://dev.lunchmoney.app/v1/transactions HTTP/1.1
 Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}} 
 
 ###
+GET https://dev.lunchmoney.app/v1/categories HTTP/1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}} 
+
+###
 # @prompt transactionID
 PUT https://dev.lunchmoney.app/v1/transactions/{{transactionID}} HTTP/1.1
 Content-Type: application/json

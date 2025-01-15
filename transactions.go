@@ -47,8 +47,8 @@ type TransactionFilters struct {
 	AssetID         int64  `json:"asset_id"`
 	Offset          int64  `json:"offset"`
 	Limit           int64  `json:"limit"`
-	StartDate       string `json:"start_date" validate:"datetime=2006-01-02"`
-	EndDate         string `json:"end_date" validate:"datetime=2006-01-02"`
+	StartDate       string `json:"start_date" validate:"omitempty,datetime=2006-01-02"`
+	EndDate         string `json:"end_date" validate:"omitempty,datetime=2006-01-02"`
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 

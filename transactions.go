@@ -79,7 +79,7 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 
 		maps, err := filters.ToMap()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("convert filters to map: %w", err)
 		}
 		options = maps
 	}

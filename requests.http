@@ -24,3 +24,8 @@ Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}
         "status":"cleared"
     }
 }
+
+###
+# @name getPlaidAccounts
+GET https://dev.lunchmoney.app/v1/plaid_accounts HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}

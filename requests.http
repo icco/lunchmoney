@@ -29,3 +29,9 @@ Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}
 # @name getPlaidAccounts
 GET https://dev.lunchmoney.app/v1/plaid_accounts HTTP/1.1
 Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}
+
+
+###
+# @name getRecurringExpenses
+GET https://dev.lunchmoney.app/v1/recurring_expenses?debit_as_negative=true HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}

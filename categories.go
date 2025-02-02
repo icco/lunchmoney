@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -50,13 +51,16 @@ func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 
 	for _, b := range resp.Categories {
 		if err := validate.StructCtx(ctx, b); err != nil {
-			switch v := err.(type) {
-			case validator.ValidationErrors:
-				return nil, fmt.Errorf("validating response: %s", v.Error())
-			case *validator.InvalidValidationError:
-				return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+			var validationErrors validator.ValidationErrors
+			var invalidValidationError *validator.InvalidValidationError
+
+			switch {
+			case errors.As(err, &validationErrors):
+				return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
+			case errors.As(err, &invalidValidationError):
+				return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
 			default:
-				return nil, fmt.Errorf("validating response (%T): %w", err, v)
+				return nil, fmt.Errorf("validating response (%T): %w", err, err)
 			}
 		}
 	}
@@ -79,13 +83,16 @@ func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 
 	validate := validator.New()
 	if err := validate.StructCtx(ctx, resp); err != nil {
-		switch v := err.(type) {
-		case validator.ValidationErrors:
-			return nil, fmt.Errorf("validating response: %s", v.Error())
-		case *validator.InvalidValidationError:
-			return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+		var validationErrors validator.ValidationErrors
+		var invalidValidationError *validator.InvalidValidationError
+
+		switch {
+		case errors.As(err, &validationErrors):
+			return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
+		case errors.As(err, &invalidValidationError):
+			return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
 		default:
-			return nil, fmt.Errorf("validating response (%T): %w", err, v)
+			return nil, fmt.Errorf("validating response (%T): %w", err, err)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -73,8 +74,10 @@ func TestGetCategories(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := NewClient("test-token")
-			client.baseURL = server.URL
+			client, err := NewClient("test-token")
+			require.NoError(t, err)
+			client.Base, err = url.Parse(server.URL)
+			require.NoError(t, err)
 
 			got, err := client.GetCategories(context.Background())
 			if tt.wantErr {
@@ -148,8 +151,10 @@ func TestGetCategory(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := NewClient("test-token")
-			client.baseURL = server.URL
+			client, err := NewClient("test-token")
+			require.NoError(t, err)
+			client.Base, err = url.Parse(server.URL)
+			require.NoError(t, err)
 
 			got, err := client.GetCategory(context.Background(), tt.id)
 			if tt.wantErr {

@@ -1,0 +1,37 @@
+# @name getTransactions
+GET https://dev.lunchmoney.app/v1/transactions?debit_as_negative=true HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}} 
+
+###
+# @name getTransaction
+# @prompt transactionID the ID of the transaction to get
+GET https://dev.lunchmoney.app/v1/transactions/{{transactionID}}?debit_as_negative=true HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}} 
+
+###
+# @name getCategories
+GET https://dev.lunchmoney.app/v1/categories HTTP/1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}} 
+
+###
+# @prompt transactionID the ID of the transaction to update
+PUT https://dev.lunchmoney.app/v1/transactions/{{transactionID}} HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}
+
+{
+    "transaction": {
+        "status":"cleared"
+    }
+}
+
+###
+# @name getPlaidAccounts
+GET https://dev.lunchmoney.app/v1/plaid_accounts HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}
+
+
+###
+# @name getRecurringExpenses
+GET https://dev.lunchmoney.app/v1/recurring_expenses?debit_as_negative=true HTTP/1.1
+Authorization: Bearer {{$dotenv LUNCHMONEY_API_TOKEN}}

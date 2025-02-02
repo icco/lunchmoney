@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -19,7 +20,7 @@ type CategoriesResponse struct {
 
 // Category is a single LM category.
 type Category struct {
-	ID                int       `json:"id"`
+	ID                int64     `json:"id"`
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
 	IsIncome          bool      `json:"is_income"`
@@ -31,7 +32,8 @@ type Category struct {
 	GroupID           int64     `json:"group_id"`
 }
 
-// GetCategories returns categories 
+// GetCategories returns a flattened list of all categories in alphabetical
+// order associated with the user's account.
 func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	validate := validator.New()
 	options := map[string]string{}
@@ -49,20 +51,23 @@ func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 
 	for _, b := range resp.Categories {
 		if err := validate.StructCtx(ctx, b); err != nil {
-			switch v := err.(type) {
-			case validator.ValidationErrors:
-				return nil, fmt.Errorf("validating response: %s", v.Error())
-			case *validator.InvalidValidationError:
-				return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+			var validationErrors validator.ValidationErrors
+			var invalidValidationError *validator.InvalidValidationError
+
+			switch {
+			case errors.As(err, &validationErrors):
+				return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
+			case errors.As(err, &invalidValidationError):
+				return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
 			default:
-				return nil, fmt.Errorf("validating response (%T): %w", err, v)
+				return nil, fmt.Errorf("validating response (%T): %w", err, err)
 			}
 		}
 	}
 	return resp.Categories, nil
 }
 
-func (c *Client) GetCategory( ctx context.Context, id int64) (*Category, error)  {
+func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 	options := map[string]string{}
 	body, err := c.Get(ctx, fmt.Sprintf("/v1/categories/%d", id), options)
 	if err != nil {
@@ -78,13 +83,16 @@ func (c *Client) GetCategory( ctx context.Context, id int64) (*Category, error) 
 
 	validate := validator.New()
 	if err := validate.StructCtx(ctx, resp); err != nil {
-		switch v := err.(type) {
-		case validator.ValidationErrors:
-			return nil, fmt.Errorf("validating response: %s", v.Error())
-		case *validator.InvalidValidationError:
-			return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+		var validationErrors validator.ValidationErrors
+		var invalidValidationError *validator.InvalidValidationError
+
+		switch {
+		case errors.As(err, &validationErrors):
+			return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
+		case errors.As(err, &invalidValidationError):
+			return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
 		default:
-			return nil, fmt.Errorf("validating response (%T): %w", err, v)
+			return nil, fmt.Errorf("validating response (%T): %w", err, err)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -109,13 +110,16 @@ func (c *Client) GetBudgets(ctx context.Context, filters *BudgetFilters) ([]*Bud
 		}
 
 		if err := validate.StructCtx(ctx, b); err != nil {
-			switch v := err.(type) {
-			case validator.ValidationErrors:
-				return nil, fmt.Errorf("validating response: %s", v.Error())
-			case *validator.InvalidValidationError:
-				return nil, fmt.Errorf("validating response (InvalidValidation): %s", v.Error())
+			var validationErrors validator.ValidationErrors
+			var invalidValidationError *validator.InvalidValidationError
+
+			switch {
+			case errors.As(err, &validationErrors):
+				return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
+			case errors.As(err, &invalidValidationError):
+				return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
 			default:
-				return nil, fmt.Errorf("validating response (%T): %w", err, v)
+				return nil, fmt.Errorf("validating response (%T): %w", err, err)
 			}
 		}
 	}

@@ -17,7 +17,7 @@ type TransactionsResponse struct {
 // Transaction is a single LM transaction.
 type Transaction struct {
 	ID             int64  `json:"id"`
-	Date           string `json:"date" validate:"datetime=2006-01-02"`
+	Date           string `json:"date" validate:"omitempty,datetime=2006-01-02"`
 	Payee          string `json:"payee"`
 	Amount         string `json:"amount"`
 	Currency       string `json:"currency"`
@@ -40,29 +40,61 @@ func (t *Transaction) ParsedAmount() (*money.Money, error) {
 
 // TransactionFilters are options to pass into the request for transactions.
 type TransactionFilters struct {
-	TagID           int64  `json:"tag_id"`
-	RecurringID     int64  `json:"recurring_id"`
-	PlaidAccountID  int64  `json:"plaid_account_id"`
-	CategoryID      int64  `json:"category_id"`
-	AssetID         int64  `json:"asset_id"`
-	Offset          int64  `json:"offset"`
-	Limit           int64  `json:"limit"`
-	StartDate       string `json:"start_date" validate:"datetime=2006-01-02"`
-	EndDate         string `json:"end_date" validate:"datetime=2006-01-02"`
-	DebitAsNegative bool   `json:"debit_as_negative"`
+	TagID           *int64  `json:"tag_id"`
+	RecurringID     *int64  `json:"recurring_id"`
+	PlaidAccountID  *int64  `json:"plaid_account_id"`
+	CategoryID      *int64  `json:"category_id"`
+	AssetID         *int64  `json:"asset_id"`
+	Offset          *int64  `json:"offset"`
+	Limit           *int64  `json:"limit"`
+	StartDate       *string `json:"start_date" validate:"omitempty,datetime=2006-01-02"`
+	EndDate         *string `json:"end_date" validate:"omitempty,datetime=2006-01-02"`
+	DebitAsNegative *bool   `json:"debit_as_negative"`
 }
 
 // ToMap converts the filters to a string map to be sent with the request as
-// GET parameters.
+// GET parameters. If the field is nil, it will not be included in the map.
+// This is useful for the query parameters in the request.
 func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
-	b, err := json.Marshal(r)
-	if err != nil {
-		return nil, err
+	if r.TagID != nil {
+		ret["tag_id"] = fmt.Sprintf("%d", *r.TagID)
 	}
 
-	if err := json.Unmarshal(b, &ret); err != nil {
-		return nil, err
+	if r.RecurringID != nil {
+		ret["recurring_id"] = fmt.Sprintf("%d", *r.RecurringID)
+	}
+
+	if r.PlaidAccountID != nil {
+		ret["plaid_account_id"] = fmt.Sprintf("%d", *r.PlaidAccountID)
+	}
+
+	if r.CategoryID != nil {
+		ret["category_id"] = fmt.Sprintf("%d", *r.CategoryID)
+	}
+
+	if r.AssetID != nil {
+		ret["asset_id"] = fmt.Sprintf("%d", *r.AssetID)
+	}
+
+	if r.Offset != nil {
+		ret["offset"] = fmt.Sprintf("%d", *r.Offset)
+	}
+
+	if r.Limit != nil {
+		ret["limit"] = fmt.Sprintf("%d", *r.Limit)
+	}
+
+	if r.StartDate != nil {
+		ret["start_date"] = *r.StartDate
+	}
+
+	if r.EndDate != nil {
+		ret["end_date"] = *r.EndDate
+	}
+
+	if r.DebitAsNegative != nil {
+		ret["debit_as_negative"] = fmt.Sprintf("%t", *r.DebitAsNegative)
 	}
 
 	return ret, nil
@@ -79,7 +111,7 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 
 		maps, err := filters.ToMap()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("convert filters to map: %w", err)
 		}
 		options = maps
 	}
@@ -129,6 +161,49 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 
 	if err := validate.Struct(resp); err != nil {
 		return nil, err
+	}
+
+	return resp, nil
+}
+
+// UpdateTransaction is the transaction to update.
+type UpdateTransaction struct {
+	Date        *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`
+	CategoryID  *int    `json:"category_id,omitempty"`
+	Payee       *string `json:"payee,omitempty"`
+	Currency    *string `json:"currency,omitempty"`
+	AssetID     *int    `json:"asset_id,omitempty"`
+	RecurringID *int    `json:"recurring_id,omitempty"`
+	Notes       *string `json:"notes,omitempty"`
+	Status      *string `json:"status,omitempty" validate:"omitnil,oneof=cleared uncleared"`
+	ExternalID  *string `json:"external_id,omitempty"`
+}
+
+// UpdateRequest is the request to update a transaction.
+type UpdateRequest struct {
+	Transaction *UpdateTransaction `json:"transaction"`
+}
+
+// UpdateTransactionResp is the response we get from updating a transaction.
+type UpdateTransactionResp struct {
+	Updated bool  `json:"updated"`
+	Split   []int `json:"split"`
+}
+
+func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) (*UpdateTransactionResp, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(ut); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Put(ctx, fmt.Sprintf("/v1/transactions/%d", id), &UpdateRequest{Transaction: ut})
+	if err != nil {
+		return nil, fmt.Errorf("update transaction %d: %w", id, err)
+	}
+
+	resp := &UpdateTransactionResp{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
 	return resp, nil

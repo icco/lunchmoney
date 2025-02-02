@@ -42,7 +42,7 @@ func (r *RecurringExpense) ParsedAmount() (*money.Money, error) {
 
 // RecurringExpenseFilters are options to pass to the request.
 type RecurringExpenseFilters struct {
-	StartDate       string `json:"start_date" validate:"datetime=2006-01-02"`
+	StartDate       string `json:"start_date" validate:"omitempty,datetime=2006-01-02"`
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 

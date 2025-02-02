@@ -31,7 +31,8 @@ type Category struct {
 	GroupID           int64     `json:"group_id"`
 }
 
-// GetCategories returns categories
+// GetCategories returns a flattened list of all categories in alphabetical
+// order associated with the user's account.
 func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	validate := validator.New()
 	options := map[string]string{}

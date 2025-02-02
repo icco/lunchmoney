@@ -19,7 +19,7 @@ type CategoriesResponse struct {
 
 // Category is a single LM category.
 type Category struct {
-	ID                int       `json:"id"`
+	ID                int64     `json:"id"`
 	Name              string    `json:"name"`
 	Description       string    `json:"description"`
 	IsIncome          bool      `json:"is_income"`
@@ -31,7 +31,7 @@ type Category struct {
 	GroupID           int64     `json:"group_id"`
 }
 
-// GetCategories returns categories 
+// GetCategories returns categories
 func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	validate := validator.New()
 	options := map[string]string{}
@@ -62,7 +62,7 @@ func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	return resp.Categories, nil
 }
 
-func (c *Client) GetCategory( ctx context.Context, id int64) (*Category, error)  {
+func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 	options := map[string]string{}
 	body, err := c.Get(ctx, fmt.Sprintf("/v1/categories/%d", id), options)
 	if err != nil {

@@ -27,6 +27,7 @@ type PlaidAccount struct {
 	Status            string    `json:"status"`
 	LastImport        time.Time `json:"last_import"`
 	Balance           string    `json:"balance"`
+	ToBase            float64   `json:"to_base"` // the balance converted to the user's primary currency
 	Currency          string    `json:"currency"`
 	BalanceLastUpdate time.Time `json:"balance_last_update"`
 	Limit             int64     `json:"limit"`

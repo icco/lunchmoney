@@ -99,6 +99,7 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		var buf bytes.Buffer
@@ -116,7 +117,12 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
-	return resp.Body, nil
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, resp.Body); err != nil {
+		return nil, fmt.Errorf("could not read response: %w", err)
+	}
+
+	return &buf, nil
 }
 
 func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Reader, error) {
@@ -142,6 +148,7 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		var buf bytes.Buffer
@@ -159,7 +166,12 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
-	return resp.Body, nil
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, resp.Body); err != nil {
+		return nil, fmt.Errorf("could not read response: %w", err)
+	}
+
+	return &buf, nil
 }
 
 // ParseCurrency turns two strings into a money struct.

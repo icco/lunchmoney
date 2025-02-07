@@ -2,7 +2,6 @@
 
 [![GoDoc](https://godoc.org/github.com/icco/lunchmoney?status.svg)](https://godoc.org/github.com/icco/lunchmoney)
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/lunchmoney)](https://goreportcard.com/report/github.com/icco/lunchmoney)
-[![Build Status](https://travis-ci.com/icco/lunchmoney.svg?branch=main)](https://travis-ci.com/icco/lunchmoney)
 
 Golang API wrapper for Lunch Money API
 

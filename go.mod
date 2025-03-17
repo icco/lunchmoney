@@ -1,6 +1,8 @@
 module github.com/icco/lunchmoney
 
-go 1.20
+go 1.23.0
+
+toolchain go1.24.1
 
 require (
 	github.com/Rhymond/go-money v1.0.14

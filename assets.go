@@ -23,6 +23,7 @@ type Asset struct {
 	Name            string    `json:"name"`
 	Balance         string    `json:"balance"`
 	BalanceAsOf     time.Time `json:"balance_as_of"`
+	ToBase          float64   `json:"to_base"` // the balance converted to the user's primary currency
 	Currency        string    `json:"currency"`
 	Status          string    `json:"status"`
 	InstitutionName string    `json:"institution_name"`

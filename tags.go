@@ -23,7 +23,7 @@ func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 	validate := validator.New()
 	body, err := c.Get(ctx, "/v1/tags", nil)
 	if err != nil {
-		return nil, fmt.Errorf("get transactions: %w", err)
+		return nil, fmt.Errorf("get tags: %w", err)
 	}
 
 	resp := &TagsResponse{}

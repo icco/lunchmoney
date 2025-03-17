@@ -13,27 +13,35 @@ import (
 )
 
 // CategoriesResponse is the response we get from requesting categories.
+// It contains a list of categories and an optional error message.
 type CategoriesResponse struct {
 	Categories []*Category `json:"categories"`
 	Error      string      `json:"error"`
 }
 
-// Category is a single LM category.
+// Category represents a single Lunch Money category.
+// Categories are used to organize transactions and budgets.
+// They can be grouped hierarchically and marked as income or excluded from various calculations.
 type Category struct {
-	ID                int64     `json:"id"`
-	Name              string    `json:"name"`
-	Description       string    `json:"description"`
-	IsIncome          bool      `json:"is_income"`
-	ExcludeFromBudget bool      `json:"exclude_from_budget"`
-	ExcludeFromTotals bool      `json:"exclude_from_totals"`
-	UpdatedAt         time.Time `json:"updated_at"`
-	CreatedAt         time.Time `json:"created_at"`
-	IsGroup           bool      `json:"is_group"`
-	GroupID           int64     `json:"group_id"`
+	ID                int64     `json:"id"`                  // Unique identifier for the category
+	Name              string    `json:"name"`                // Display name of the category
+	Description       string    `json:"description"`         // Optional description of the category
+	IsIncome          bool      `json:"is_income"`           // Whether this category represents income
+	ExcludeFromBudget bool      `json:"exclude_from_budget"` // Whether to exclude from budget calculations
+	ExcludeFromTotals bool      `json:"exclude_from_totals"` // Whether to exclude from total calculations
+	UpdatedAt         time.Time `json:"updated_at"`          // Last modification timestamp
+	CreatedAt         time.Time `json:"created_at"`          // Creation timestamp
+	IsGroup           bool      `json:"is_group"`            // Whether this category is a group
+	GroupID           int64     `json:"group_id"`            // ID of the parent group, if any
 }
 
 // GetCategories returns a flattened list of all categories in alphabetical
-// order associated with the user's account.
+// order associated with the user's account. This includes both regular categories
+// and category groups. The returned categories include metadata such as creation time,
+// group relationships, and budget exclusion settings.
+//
+// The context can be used to control the request lifecycle.
+// Returns an error if the API request fails or if the response cannot be validated.
 func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	validate := validator.New()
 	options := map[string]string{}
@@ -67,6 +75,16 @@ func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
 	return resp.Categories, nil
 }
 
+// GetCategory retrieves a single category by its ID.
+// It returns detailed information about the category including its metadata,
+// group relationships, and various settings.
+//
+// Parameters:
+//   - ctx: Context for controlling the request lifecycle
+//   - id: The unique identifier of the category to retrieve
+//
+// Returns the category details or an error if the request fails or
+// the response cannot be validated.
 func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 	options := map[string]string{}
 	body, err := c.Get(ctx, fmt.Sprintf("/v1/categories/%d", id), options)

@@ -30,7 +30,7 @@ type Transaction struct {
 	IsGroup        bool   `json:"is_group"`
 	GroupID        int64  `json:"group_id"`
 	ParentID       int64  `json:"parent_id"`
-	ExternalID     int64  `json:"external_id"`
+	ExternalID     string `json:"external_id"`
 }
 
 // ParsedAmount turns the currency from lunchmoney into a Go currency.

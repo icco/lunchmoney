@@ -57,14 +57,20 @@ func NewClient(apikey string) (*Client, error) {
 
 // ErrorResponse is json if we get an error from the LM API.
 type ErrorResponse struct {
-	ErrorString   string `json:"error,omitempty"`
+	ErrorString   any    `json:"error,omitempty"`
 	ErrorName     string `json:"name,omitempty"`
 	MessageString string `json:"message,omitempty"`
 }
 
 func (e *ErrorResponse) Error() string {
 	if e.ErrorString != "" {
-		return e.ErrorString
+		switch v := e.ErrorString.(type) {
+		case string:
+			return v
+		case []string:
+			return fmt.Sprintf("%s", v)
+		default:
+		}
 	}
 
 	if e.MessageString != "" {
@@ -125,7 +131,15 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	return &buf, nil
 }
 
-func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Reader, error) {
+func (c *Client) Put(ctx context.Context, path string, body any) (io.Reader, error) {
+	return c.do(ctx, http.MethodPut, path, body)
+}
+
+func (c *Client) Post(ctx context.Context, path string, body any) (io.Reader, error) {
+	return c.do(ctx, http.MethodPost, path, body)
+}
+
+func (c *Client) do(ctx context.Context, method string, path string, body any) (io.Reader, error) {
 	u, err := url.Parse(c.Base.String())
 	if err != nil {
 		return nil, fmt.Errorf("bad path: %w", err)
@@ -138,7 +152,7 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 		return nil, fmt.Errorf("could not marshal body: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, u.String(), bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(b))
 	if err != nil {
 		return nil, fmt.Errorf("could not create request: %w", err)
 	}
@@ -152,26 +166,39 @@ func (c *Client) Put(ctx context.Context, path string, body interface{}) (io.Rea
 
 	if resp.StatusCode != http.StatusOK {
 		var buf bytes.Buffer
-		tee := io.TeeReader(resp.Body, &buf)
-		errResp := ErrorResponse{}
-		if err := json.NewDecoder(tee).Decode(&errResp); err != nil {
-			return nil, fmt.Errorf("could not decode error response %s: %w", buf.String(), err)
-		}
-
-		// log.Printf("%s -> %+v", buf.String(), errResp)
-		if errResp.Error() != "" {
-			return nil, fmt.Errorf("%s: %s", resp.Status, errResp.Error())
+		err := c.tryToFindError(resp, &buf, true)
+		if err != nil {
+			return nil, err
 		}
 
 		return nil, fmt.Errorf("%s", resp.Status)
 	}
 
-	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, resp.Body); err != nil {
-		return nil, fmt.Errorf("could not read response: %w", err)
+	// Sometimes 200 still means that there is an error
+	var finalReader bytes.Buffer
+	err = c.tryToFindError(resp, &finalReader, false)
+	if err != nil {
+		return nil, err
 	}
 
-	return &buf, nil
+	return &finalReader, nil
+}
+
+func (*Client) tryToFindError(resp *http.Response, outBuf *bytes.Buffer, failOnDecodeErr bool) error {
+	tee := io.TeeReader(resp.Body, outBuf)
+	errResp := ErrorResponse{}
+	if err := json.NewDecoder(tee).Decode(&errResp); err != nil {
+		if failOnDecodeErr {
+			return fmt.Errorf("could not decode error response %s: %w", outBuf.String(), err)
+		}
+		// some other message is involved here (eg array)
+		return nil
+	}
+
+	if errResp.Error() != "" {
+		return fmt.Errorf("%s: %s", resp.Status, errResp.Error())
+	}
+	return nil
 }
 
 // ParseCurrency turns two strings into a money struct.

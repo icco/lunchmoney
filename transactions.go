@@ -166,6 +166,53 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 	return resp, nil
 }
 
+type InsertTransactionsRequest struct {
+	ApplyRules        bool                `json:"apply_rules,omitempty"`
+	SkipDuplicates    bool                `json:"skip_duplicates,omitempty"`
+	CheckForRecurring bool                `json:"check_for_recurring,omitempty"`
+	DebitAsNegative   bool                `json:"debit_as_negative,omitempty"`
+	SkipBalanceUpdate bool                `json:"skip_balance_update,omitempty"`
+	Transactions      []InsertTransaction `json:"transactions"`
+}
+
+type InsertTransaction struct {
+	Date           string `json:"date" validate:"datetime=2006-01-02"`
+	Amount         string `json:"amount"`
+	CategoryID     *int64 `json:"category_id,omitempty"`
+	Payee          string `json:"payee,omitempty"`
+	Currency       string `json:"currency,omitempty"`
+	AssetID        *int64 `json:"asset_id,omitempty"`
+	PlaidAccountID *int64 `json:"plaid_account_id,omitempty"`
+	RecurringID    *int64 `json:"recurring_id,omitempty"`
+	Notes          string `json:"notes,omitempty"`
+	Status         string `json:"status,omitempty" validate:"omitnil,oneof=cleared uncleared"`
+	ExternalID     string `json:"external_id,omitempty" validate:"max=75"`
+	TagsIDs        []int  `json:"tags,omitempty"`
+}
+
+type InsertTransactionsResponse struct {
+	IDs []int64 `json:"ids"`
+}
+
+func (c *Client) InsertTransactions(ctx context.Context, itReq InsertTransactionsRequest) (*InsertTransactionsResponse, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.Struct(itReq); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Post(ctx, "/v1/transactions", itReq)
+	if err != nil {
+		return nil, fmt.Errorf("insert transaction: %w", err)
+	}
+
+	resp := &InsertTransactionsResponse{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("insert response decode error: %w", err)
+	}
+
+	return resp, nil
+}
+
 // UpdateTransaction is the transaction to update.
 type UpdateTransaction struct {
 	Date        *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`

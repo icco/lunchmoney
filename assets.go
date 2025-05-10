@@ -56,3 +56,35 @@ func (c *Client) GetAssets(ctx context.Context) ([]*Asset, error) {
 
 	return resp.Assets, nil
 }
+
+// UpdateAsset updates a singl LM asset.
+type UpdateAsset struct {
+	TypeName             *string `json:"type_name,omitempty"`
+	SubtypeName          *string `json:"subtype_name,omitempty"`
+	Name                 *string `json:"name,omitempty"`
+	Balance              *string `json:"balance,omitempty"`
+	BalanceAsOf          *string `json:"balance_as_of,omitempty"`
+	Currency             *string `json:"currency,omitempty"`
+	InstitutionName      *string `json:"institution_name,omitempty"`
+	ClosedOn             *string `json:"closed_on,omitempty"`
+	ExcludedTransactions *bool   `json:"excluded_transactions,omitempty"`
+}
+
+func (c *Client) UpdateAsset(ctx context.Context, id int64, asset *UpdateAsset) (*Asset, error) {
+	validate := validator.New()
+	if err := validate.Struct(asset); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Put(ctx, fmt.Sprintf("/v1/assets/%d", id), asset)
+	if err != nil {
+		return nil, fmt.Errorf("put asset %d: %w", id, err)
+	}
+
+	resp := &Asset{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}

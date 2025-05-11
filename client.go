@@ -57,9 +57,8 @@ func NewClient(apikey string) (*Client, error) {
 
 // ErrorResponse is json if we get an error from the LM API.
 type ErrorResponse struct {
-	ErrorString   any    `json:"error,omitempty"`
-	ErrorName     string `json:"name,omitempty"`
-	MessageString string `json:"message,omitempty"`
+	ErrorString any   `json:"error,omitempty"`
+	ErrorsArray []any `json:"errors,omitempty"`
 }
 
 func (e *ErrorResponse) Error() string {
@@ -73,15 +72,12 @@ func (e *ErrorResponse) Error() string {
 		}
 	}
 
-	if e.MessageString != "" {
-		return e.MessageString
+	msg := ""
+	if len(e.ErrorsArray) > 0 {
+		msg = fmt.Sprintf("%v", e.ErrorsArray)
 	}
 
-	if e.ErrorName != "" {
-		return e.ErrorName
-	}
-
-	return ""
+	return msg
 }
 
 // Get makes a request using the client to the path specified with the

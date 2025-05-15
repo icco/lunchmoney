@@ -21,6 +21,7 @@ type Asset struct {
 	TypeName        string    `json:"type_name"`
 	SubtypeName     string    `json:"subtype_name"`
 	Name            string    `json:"name"`
+	DisplayName     string    `json:"display_name"`
 	Balance         string    `json:"balance"`
 	BalanceAsOf     time.Time `json:"balance_as_of"`
 	ToBase          float64   `json:"to_base"` // the balance converted to the user's primary currency
@@ -62,6 +63,7 @@ type UpdateAsset struct {
 	TypeName             *string `json:"type_name,omitempty"`
 	SubtypeName          *string `json:"subtype_name,omitempty"`
 	Name                 *string `json:"name,omitempty"`
+	DisplayName          *string `json:"display_name,omitempty"`
 	Balance              *string `json:"balance,omitempty"`
 	BalanceAsOf          *string `json:"balance_as_of,omitempty"`
 	Currency             *string `json:"currency,omitempty"`

@@ -62,14 +62,8 @@ type ErrorResponse struct {
 }
 
 func (e *ErrorResponse) Error() string {
-	if e.ErrorString != "" {
-		switch v := e.ErrorString.(type) {
-		case string:
-			return v
-		case []string:
-			return fmt.Sprintf("%s", v)
-		default:
-		}
+	if e.ErrorString != nil {
+		return fmt.Sprintf("%v", e.ErrorString)
 	}
 
 	msg := ""

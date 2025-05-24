@@ -70,7 +70,8 @@ func TestGetCategories(t *testing.T) {
 				assert.Equal(t, "/v1/categories", r.URL.Path)
 				assert.Equal(t, http.MethodGet, r.Method)
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.response))
+				_, err := w.Write([]byte(tt.response))
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 
@@ -147,7 +148,8 @@ func TestGetCategory(t *testing.T) {
 				assert.Equal(t, "/v1/categories/1", r.URL.Path)
 				assert.Equal(t, http.MethodGet, r.Method)
 				w.WriteHeader(tt.statusCode)
-				w.Write([]byte(tt.response))
+				_, err := w.Write([]byte(tt.response))
+				require.NoError(t, err)
 			}))
 			defer server.Close()
 

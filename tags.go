@@ -18,7 +18,9 @@ type Tag struct {
 	Description string `json:"description"`
 }
 
-// GetTags gets all tags filtered by the filters.
+// GetTags retrieves all tags from the Lunch Money API.
+// It returns a slice of Tag objects containing tag details such as ID, name, and description.
+// Returns an error if the request fails or if any tag fails validation.
 func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 	validate := validator.New()
 	body, err := c.Get(ctx, "/v1/tags", nil)

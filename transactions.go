@@ -33,7 +33,9 @@ type Transaction struct {
 	ExternalID     string `json:"external_id"`
 }
 
-// ParsedAmount turns the currency from lunchmoney into a Go currency.
+// ParsedAmount converts the transaction's amount and currency into a money.Money object.
+// This provides a convenient way to work with the transaction amount using the go-money library's
+// currency handling capabilities. Returns an error if the amount cannot be parsed.
 func (t *Transaction) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(t.Amount, t.Currency)
 }
@@ -54,7 +56,8 @@ type TransactionFilters struct {
 
 // ToMap converts the filters to a string map to be sent with the request as
 // GET parameters. If the field is nil, it will not be included in the map.
-// This is useful for the query parameters in the request.
+// This method provides query parameters for the Lunch Money API in the expected format.
+// The function handles conversion of various data types to strings suitable for URL parameters.
 func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 	if r.TagID != nil {
@@ -100,7 +103,9 @@ func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetTransactions gets all transactions filtered by the filters.
+// GetTransactions retrieves all transactions from the Lunch Money API based on the provided filters.
+// It returns a slice of Transaction objects or an error if the request fails.
+// The filters parameter can be used to narrow down results by date range, category, and other criteria.
 func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilters) ([]*Transaction, error) {
 	validate := validator.New()
 	options := map[string]string{}
@@ -133,7 +138,9 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 	return resp.Transactions, nil
 }
 
-// GetTransaction gets a transaction by id.
+// GetTransaction retrieves a single transaction from the Lunch Money API by its ID.
+// It returns the transaction details or an error if the request fails.
+// The filters parameter can be used to specify additional query parameters for the request.
 func (c *Client) GetTransaction(ctx context.Context, id int64, filters *TransactionFilters) (*Transaction, error) {
 	validate := validator.New()
 	options := map[string]string{}
@@ -166,6 +173,8 @@ func (c *Client) GetTransaction(ctx context.Context, id int64, filters *Transact
 	return resp, nil
 }
 
+// InsertTransactionsRequest contains the data needed to create one or more transactions.
+// It includes options for how the transactions should be processed by the Lunch Money system.
 type InsertTransactionsRequest struct {
 	ApplyRules        bool                `json:"apply_rules,omitempty"`
 	SkipDuplicates    bool                `json:"skip_duplicates,omitempty"`
@@ -175,6 +184,9 @@ type InsertTransactionsRequest struct {
 	Transactions      []InsertTransaction `json:"transactions"`
 }
 
+// InsertTransaction represents a single transaction to be created in the Lunch Money system.
+// It contains all the details needed to create a new transaction, with required fields being
+// Date and Amount, while other fields are optional.
 type InsertTransaction struct {
 	Date           string `json:"date" validate:"datetime=2006-01-02"`
 	Amount         string `json:"amount"`
@@ -190,10 +202,15 @@ type InsertTransaction struct {
 	TagsIDs        []int  `json:"tags,omitempty"`
 }
 
+// InsertTransactionsResponse contains the IDs of transactions created through the InsertTransactions method.
+// These IDs can be used to reference the newly created transactions in subsequent API calls.
 type InsertTransactionsResponse struct {
 	IDs []int64 `json:"ids"`
 }
 
+// InsertTransactions creates new transactions in the Lunch Money API.
+// It takes an InsertTransactionsRequest with transaction details and options.
+// Returns the IDs of the created transactions or an error if the insertion fails.
 func (c *Client) InsertTransactions(ctx context.Context, itReq InsertTransactionsRequest) (*InsertTransactionsResponse, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(itReq); err != nil {
@@ -213,7 +230,9 @@ func (c *Client) InsertTransactions(ctx context.Context, itReq InsertTransaction
 	return resp, nil
 }
 
-// UpdateTransaction is the transaction to update.
+// UpdateTransaction contains fields that can be updated for an existing transaction.
+// All fields are optional, and only non-nil fields will be sent in the update request.
+// This provides a flexible way to update specific fields without needing to include unchanged values.
 type UpdateTransaction struct {
 	Date        *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`
 	CategoryID  *int    `json:"category_id,omitempty"`
@@ -226,17 +245,23 @@ type UpdateTransaction struct {
 	ExternalID  *string `json:"external_id,omitempty"`
 }
 
-// UpdateRequest is the request to update a transaction.
+// UpdateRequest is the request body used to update a transaction in the Lunch Money API.
+// It wraps an UpdateTransaction object in the format expected by the API.
 type UpdateRequest struct {
 	Transaction *UpdateTransaction `json:"transaction"`
 }
 
-// UpdateTransactionResp is the response we get from updating a transaction.
+// UpdateTransactionResp is the response received from the API when updating a transaction.
+// It indicates whether the update was successful and includes any split transaction IDs
+// if the transaction was split during the update process.
 type UpdateTransactionResp struct {
 	Updated bool  `json:"updated"`
 	Split   []int `json:"split"`
 }
 
+// UpdateTransaction modifies an existing transaction with the specified ID.
+// It takes an UpdateTransaction object with the fields to be updated.
+// Returns information about the update operation or an error if the update fails.
 func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) (*UpdateTransactionResp, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.Struct(ut); err != nil {

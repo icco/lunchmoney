@@ -35,7 +35,9 @@ type RecurringExpense struct {
 	TransactionID  int64     `json:"transaction_id"`
 }
 
-// ParsedAmount turns the currency from lunchmoney into a Go currency.
+// ParsedAmount converts the recurring expense's amount and currency into a money.Money object.
+// This provides a convenient way to work with the expense amount using the go-money library's
+// currency handling capabilities. Returns an error if the amount cannot be parsed.
 func (r *RecurringExpense) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(r.Amount, r.Currency)
 }
@@ -46,8 +48,9 @@ type RecurringExpenseFilters struct {
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 
-// ToMap converts the filters to a string map to be sent with the request as
-// GET parameters.
+// ToMap converts the recurring expense filters to a string map to be sent with the request as
+// GET parameters. This method formats filter parameters correctly for the Lunch Money API.
+// It marshals the filter struct to JSON and then unmarshals it to a string map.
 func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 	b, err := json.Marshal(r)
@@ -62,7 +65,9 @@ func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetRecurringExpenses gets all recurring expenses filtered by the filters.
+// GetRecurringExpenses retrieves all recurring expenses from the Lunch Money API based on the provided filters.
+// It returns a slice of RecurringExpense objects or an error if the request fails.
+// The filters parameter can be used to specify date ranges and other criteria.
 func (c *Client) GetRecurringExpenses(ctx context.Context, filters *RecurringExpenseFilters) ([]*RecurringExpense, error) {
 	validate := validator.New()
 	options := map[string]string{}

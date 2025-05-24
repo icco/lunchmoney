@@ -95,7 +95,15 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			if err != nil {
+				err = fmt.Errorf("error closing response body: %v: %w", cerr, err)
+			} else {
+				err = fmt.Errorf("error closing response body: %v", cerr)
+			}
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var buf bytes.Buffer
@@ -156,7 +164,15 @@ func (c *Client) do(ctx context.Context, method string, path string, body any) (
 	if err != nil {
 		return nil, fmt.Errorf("request (%+v) failed: %w", req, err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil {
+			if err != nil {
+				err = fmt.Errorf("error closing response body: %v: %w", cerr, err)
+			} else {
+				err = fmt.Errorf("error closing response body: %v", cerr)
+			}
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		var buf bytes.Buffer

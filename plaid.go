@@ -33,12 +33,16 @@ type PlaidAccount struct {
 	Limit             int64     `json:"limit"`
 }
 
-// ParsedAmount turns the currency from lunchmoney into a Go currency.
+// ParsedAmount converts the Plaid account balance and currency into a money.Money object.
+// This provides a convenient way to work with account balances using the go-money library's
+// currency handling capabilities. Returns an error if the balance cannot be parsed.
 func (p *PlaidAccount) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(p.Balance, p.Currency)
 }
 
-// GetPlaidAccounts gets all plaid accounts filtered by the filters.
+// GetPlaidAccounts retrieves all Plaid-connected accounts from the Lunch Money API.
+// It returns a slice of PlaidAccount objects containing information about each account,
+// including balance, institution information, and status. Returns an error if the request fails.
 func (c *Client) GetPlaidAccounts(ctx context.Context) ([]*PlaidAccount, error) {
 	validate := validator.New()
 	options := map[string]string{}

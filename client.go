@@ -121,10 +121,14 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	return &buf, nil
 }
 
+// Put performs an HTTP PUT request to the specified API endpoint with the provided body.
+// It returns the response body as an io.Reader or an error if the request fails.
 func (c *Client) Put(ctx context.Context, path string, body any) (io.Reader, error) {
 	return c.do(ctx, http.MethodPut, path, body)
 }
 
+// Post performs an HTTP POST request to the specified API endpoint with the provided body.
+// It returns the response body as an io.Reader or an error if the request fails.
 func (c *Client) Post(ctx context.Context, path string, body any) (io.Reader, error) {
 	return c.do(ctx, http.MethodPost, path, body)
 }
@@ -191,7 +195,9 @@ func (*Client) tryToFindError(resp *http.Response, outBuf *bytes.Buffer, failOnD
 	return nil
 }
 
-// ParseCurrency turns two strings into a money struct.
+// ParseCurrency converts a string amount and currency code into a money.Money struct.
+// It parses the amount as a float, multiplies by 100 to convert to cents, and returns
+// a Money object in the specified currency. Returns an error if the amount can't be parsed.
 func ParseCurrency(amount, currency string) (*money.Money, error) {
 	f, err := strconv.ParseFloat(amount, 64)
 	if err != nil {

@@ -52,8 +52,9 @@ type BudgetFilters struct {
 	EndDate   string `json:"end_date" validate:"datetime=2006-01-02,required"`
 }
 
-// ToMap converts the filters to a string map to be sent with the request as
-// GET parameters.
+// ToMap converts the budget filters to a string map to be sent with the request as
+// GET parameters. This method formats the date filters correctly for the Lunch Money API.
+// It marshals the filter struct to JSON and then unmarshals it to a string map.
 func (r *BudgetFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 	b, err := json.Marshal(r)
@@ -68,7 +69,9 @@ func (r *BudgetFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// ParsedAmount turns the currency from lunchmoney into a Go currency.
+// ParsedAmount converts the budget amount and currency into a money.Money object.
+// This provides a convenient way to work with budget figures using the go-money library's
+// currency handling capabilities. Returns an error if the amount cannot be parsed.
 func (b *BudgetData) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(b.BudgetAmount.String(), b.BudgetCurrency)
 }

@@ -98,9 +98,9 @@ func (c *Client) Get(ctx context.Context, path string, options map[string]string
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil {
 			if err != nil {
-				err = fmt.Errorf("error closing response body: %v: %w", cerr, err)
+				err = fmt.Errorf("error closing response body: %w: %w", cerr, err)
 			} else {
-				err = fmt.Errorf("error closing response body: %v", cerr)
+				err = fmt.Errorf("error closing response body: %w", cerr)
 			}
 		}
 	}()
@@ -167,9 +167,9 @@ func (c *Client) do(ctx context.Context, method string, path string, body any) (
 	defer func() {
 		if cerr := resp.Body.Close(); cerr != nil {
 			if err != nil {
-				err = fmt.Errorf("error closing response body: %v: %w", cerr, err)
+				err = fmt.Errorf("error closing response body: %w: %w", cerr, err)
 			} else {
-				err = fmt.Errorf("error closing response body: %v", cerr)
+				err = fmt.Errorf("error closing response body: %w", cerr)
 			}
 		}
 	}()

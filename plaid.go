@@ -20,6 +20,7 @@ type PlaidAccount struct {
 	ID                int64     `json:"id"`
 	DateLinked        string    `json:"date_linked"`
 	Name              string    `json:"name"`
+	DisplayName       string    `json:"display_name"`
 	Type              string    `json:"type"`
 	Subtype           string    `json:"subtype"`
 	Mask              string    `json:"mask"`

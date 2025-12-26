@@ -31,6 +31,40 @@ type Transaction struct {
 	GroupID        int64  `json:"group_id"`
 	ParentID       int64  `json:"parent_id"`
 	ExternalID     string `json:"external_id"`
+	// Additional fields from API response
+	ToBase                  float64 `json:"to_base"`
+	CategoryName            string  `json:"category_name"`
+	CategoryGroupID         int64   `json:"category_group_id"`
+	CategoryGroupName       string  `json:"category_group_name"`
+	IsIncome                bool    `json:"is_income"`
+	ExcludeFromBudget       bool    `json:"exclude_from_budget"`
+	ExcludeFromTotals       bool    `json:"exclude_from_totals"`
+	CreatedAt               string  `json:"created_at"`
+	UpdatedAt               string  `json:"updated_at"`
+	IsPending               bool    `json:"is_pending"`
+	OriginalName            string  `json:"original_name"`
+	RecurringPayee          string  `json:"recurring_payee"`
+	RecurringDescription    string  `json:"recurring_description"`
+	RecurringCadence        string  `json:"recurring_cadence"`
+	RecurringType           string  `json:"recurring_type"`
+	RecurringAmount         string  `json:"recurring_amount"`
+	RecurringCurrency       string  `json:"recurring_currency"`
+	HasChildren             bool    `json:"has_children"`
+	AssetInstitutionName    string  `json:"asset_institution_name"`
+	AssetName               string  `json:"asset_name"`
+	AssetDisplayName        string  `json:"asset_display_name"`
+	AssetStatus             string  `json:"asset_status"`
+	PlaidAccountName        string  `json:"plaid_account_name"`
+	PlaidAccountMask        string  `json:"plaid_account_mask"`
+	InstitutionName         string  `json:"institution_name"`
+	PlaidAccountDisplayName string  `json:"plaid_account_display_name"`
+	PlaidMetadata           string  `json:"plaid_metadata"`
+	PlaidCategory           string  `json:"plaid_category"`
+	Source                  string  `json:"source"`
+	DisplayName             string  `json:"display_name"`
+	DisplayNotes            string  `json:"display_notes"`
+	AccountDisplayName      string  `json:"account_display_name"`
+	Tags                    []Tag   `json:"tags"`
 }
 
 // ParsedAmount converts the transaction's amount and currency into a money.Money object.

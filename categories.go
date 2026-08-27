@@ -3,7 +3,9 @@ package lunchmoney
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -116,4 +118,148 @@ func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 	}
 
 	return resp, nil
+}
+
+// CreateCategory is a category to create. Name is required. Setting IsGroup
+// creates a category group, which is what v1 used /categories/group for.
+type CreateCategory struct {
+	Name              string `json:"name" validate:"required,min=1,max=100"`
+	Description       string `json:"description,omitempty" validate:"max=200"`
+	IsIncome          bool   `json:"is_income,omitempty"`
+	ExcludeFromBudget bool   `json:"exclude_from_budget,omitempty"`
+	ExcludeFromTotals bool   `json:"exclude_from_totals,omitempty"`
+	IsGroup           bool   `json:"is_group,omitempty"`
+	GroupID           *int64 `json:"group_id,omitempty"`
+	Archived          bool   `json:"archived,omitempty"`
+
+	// Children populates a new group, and may only be set alongside IsGroup.
+	// Each entry is the ID of an existing category, the name of a category to
+	// create, or a Category.
+	Children []any `json:"children,omitempty"`
+
+	Order     *int64 `json:"order,omitempty"`
+	Collapsed *bool  `json:"collapsed,omitempty"`
+}
+
+// CreateCategory creates a category or category group and returns it.
+func (c *Client) CreateCategory(ctx context.Context, category *CreateCategory) (*Category, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, category); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Post(ctx, "/categories", category)
+	if err != nil {
+		return nil, fmt.Errorf("create category: %w", err)
+	}
+
+	resp := &Category{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}
+
+// UpdateCategory holds the updatable fields of a category. Only non-nil fields
+// are sent. A category cannot be converted to a group or back, so IsGroup is
+// not updatable.
+type UpdateCategory struct {
+	Name              *string `json:"name,omitempty" validate:"omitnil,min=1,max=100"`
+	Description       *string `json:"description,omitempty" validate:"omitnil,max=200"`
+	IsIncome          *bool   `json:"is_income,omitempty"`
+	ExcludeFromBudget *bool   `json:"exclude_from_budget,omitempty"`
+	ExcludeFromTotals *bool   `json:"exclude_from_totals,omitempty"`
+	Archived          *bool   `json:"archived,omitempty"`
+	// ArchivedAt cannot be cleared through this library; unset Archived instead.
+	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+	GroupID    *int64     `json:"group_id,omitempty"`
+
+	// Children replaces the group's members rather than adding to them. Each
+	// entry is the ID of an existing category, the name of a category to
+	// create, or a Category. Point at an empty slice to empty the group.
+	Children *[]any `json:"children,omitempty"`
+
+	Order     *int64 `json:"order,omitempty"`
+	Collapsed *bool  `json:"collapsed,omitempty"`
+}
+
+// UpdateCategory updates the category with the given ID and returns it.
+func (c *Client) UpdateCategory(ctx context.Context, id int64, category *UpdateCategory) (*Category, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, category); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Put(ctx, fmt.Sprintf("/categories/%d", id), category)
+	if err != nil {
+		return nil, fmt.Errorf("update category %d: %w", id, err)
+	}
+
+	resp := &Category{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}
+
+// CategoryDependenciesError is the 422 the API answers with when a category
+// cannot be deleted because things still reference it. DeleteCategory returns
+// one so the counts can be inspected with errors.As; deleting with force set
+// removes the category anyway.
+type CategoryDependenciesError struct {
+	CategoryName string             `json:"category_name"`
+	Dependents   CategoryDependents `json:"dependents"`
+
+	// Err is the API error the dependents arrived as.
+	Err error `json:"-"`
+}
+
+// CategoryDependents counts what still refers to a category, by kind.
+type CategoryDependents struct {
+	Budget        int64 `json:"budget"`
+	CategoryRules int64 `json:"category_rules"`
+	Transactions  int64 `json:"transactions"`
+	Children      int64 `json:"children"`
+	Recurring     int64 `json:"recurring"`
+	PlaidCats     int64 `json:"plaid_cats"`
+}
+
+func (e *CategoryDependenciesError) Error() string {
+	return fmt.Sprintf("category %q still has dependents: %+v", e.CategoryName, e.Dependents)
+}
+
+func (e *CategoryDependenciesError) Unwrap() error { return e.Err }
+
+// DeleteCategory deletes a category or category group. Without force the API
+// refuses to delete one that still has dependents, and the returned error is a
+// CategoryDependenciesError describing them.
+func (c *Client) DeleteCategory(ctx context.Context, id int64, force bool) error {
+	options := map[string]string{}
+	if force {
+		options["force"] = "true"
+	}
+
+	if _, err := c.Delete(ctx, fmt.Sprintf("/categories/%d", id), options); err != nil {
+		return fmt.Errorf("delete category %d: %w", id, categoryDependencies(err))
+	}
+
+	return nil
+}
+
+// categoryDependencies replaces a 422 with the dependency counts it carries,
+// and passes any other error through untouched.
+func categoryDependencies(err error) error {
+	var apiErr *ErrorResponse
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnprocessableEntity {
+		return err
+	}
+
+	deps := &CategoryDependenciesError{Err: err}
+	if jsonErr := json.Unmarshal(apiErr.RawBody, deps); jsonErr != nil || deps.CategoryName == "" {
+		return err
+	}
+
+	return deps
 }

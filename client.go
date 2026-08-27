@@ -22,6 +22,11 @@ const (
 
 	// userAgent identifies this library to the API.
 	userAgent = "github.com/icco/lunchmoney"
+
+	// queryStartDate and queryEndDate name the date range query parameters
+	// that several endpoints share.
+	queryStartDate = "start_date"
+	queryEndDate   = "end_date"
 )
 
 type addAuthHeaderTransport struct {

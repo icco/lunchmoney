@@ -123,8 +123,8 @@ func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 
 	strs := map[string]*string{
-		"start_date":    r.StartDate,
-		"end_date":      r.EndDate,
+		queryStartDate:  r.StartDate,
+		queryEndDate:    r.EndDate,
 		"created_since": r.CreatedSince,
 		"updated_since": r.UpdatedSince,
 		"status":        r.Status,

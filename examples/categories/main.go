@@ -16,7 +16,7 @@ func main() {
 		log.Fatalf("client err: %+v", err)
 	}
 
-	categories, err := client.GetCategories(ctx)
+	categories, err := client.GetCategories(ctx, nil)
 	if err != nil {
 		log.Fatalf("get err: %+v", err)
 	}

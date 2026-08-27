@@ -12,7 +12,7 @@ func main() {
 	ctx := context.Background()
 	token := os.Getenv("LUNCHMONEY_TOKEN")
 	client, _ := lunchmoney.NewClient(token)
-	ts, err := client.GetAssets(ctx)
+	ts, err := client.GetManualAccounts(ctx)
 	if err != nil {
 		log.Panicf("err: %+v", err)
 	}

@@ -40,9 +40,9 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON writes the timestamp back out in ISO 8601 extended format.
 func (t Timestamp) MarshalJSON() ([]byte, error) {
-	if t.Time.IsZero() {
+	if t.IsZero() {
 		return []byte("null"), nil
 	}
 
-	return json.Marshal(t.Time.Format(time.RFC3339Nano))
+	return json.Marshal(t.Format(time.RFC3339Nano))
 }

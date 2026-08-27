@@ -62,9 +62,14 @@ func NewClient(apikey string) (*Client, error) {
 }
 
 // ErrorResponse is the body the v2 API returns alongside a 4xx or 5xx status.
+// Failing calls wrap one, so errors.As gets at the status code and the
+// individual problems the API reported.
 type ErrorResponse struct {
 	Message string       `json:"message"`
 	Errors  []ErrorEntry `json:"errors,omitempty"`
+
+	// StatusCode is the HTTP status the body arrived with.
+	StatusCode int `json:"-"`
 }
 
 // ErrorEntry is a single problem reported inside an ErrorResponse. The API is
@@ -186,7 +191,7 @@ func (c *Client) do(ctx context.Context, method, path string, options map[string
 	// v2 reports failures with a 4xx or 5xx status rather than an error
 	// embedded in a 200, and answers writes with 201 or 204.
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		errResp := &ErrorResponse{}
+		errResp := &ErrorResponse{StatusCode: resp.StatusCode}
 		if err := json.Unmarshal(buf.Bytes(), errResp); err != nil {
 			// Not the documented error body: a proxy or gateway may have
 			// answered instead, so pass along whatever it said.
@@ -197,8 +202,8 @@ func (c *Client) do(ctx context.Context, method, path string, options map[string
 			return nil, fmt.Errorf("%s", resp.Status)
 		}
 
-		if msg := errResp.Error(); msg != "" {
-			return nil, fmt.Errorf("%s: %s", resp.Status, msg)
+		if errResp.Error() != "" {
+			return nil, fmt.Errorf("%s: %w", resp.Status, errResp)
 		}
 
 		return nil, fmt.Errorf("%s", resp.Status)

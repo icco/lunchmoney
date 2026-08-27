@@ -2,6 +2,7 @@ package lunchmoney
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -94,6 +95,26 @@ func TestClientErrors(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.errContains)
 		})
 	}
+}
+
+func TestClientErrorIsInspectable(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, err := w.Write([]byte(`{"message": "Not found", "errors": [{"errMsg": "no such transaction", "id": 42}]}`))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	_, err := testClient(t, server).Get(context.Background(), "/transactions/42", nil)
+	require.Error(t, err)
+
+	var apiErr *ErrorResponse
+	require.True(t, errors.As(err, &apiErr))
+	assert.Equal(t, http.StatusNotFound, apiErr.StatusCode)
+	assert.Equal(t, "Not found", apiErr.Message)
+	require.Len(t, apiErr.Errors, 1)
+	assert.Equal(t, "no such transaction", apiErr.Errors[0].Message)
+	assert.Equal(t, float64(42), apiErr.Errors[0].Extra["id"])
 }
 
 func TestParseCurrency(t *testing.T) {

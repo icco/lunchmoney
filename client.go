@@ -148,9 +148,30 @@ func (c *Client) Delete(ctx context.Context, path string, options map[string]str
 	return c.do(ctx, http.MethodDelete, path, options, payload)
 }
 
-// do issues one request. The return values are named so that a failure to
-// close the response body still reaches the caller.
-func (c *Client) do(ctx context.Context, method, path string, options map[string]string, body any) (_ io.Reader, err error) {
+// do issues one request with body encoded as JSON.
+func (c *Client) do(ctx context.Context, method, path string, options map[string]string, body any) (io.Reader, error) {
+	var reader io.Reader
+
+	contentType := ""
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("could not marshal body: %w", err)
+		}
+		reader = bytes.NewReader(b)
+		contentType = "application/json"
+	}
+
+	return c.doBody(ctx, method, path, options, reader, contentType)
+}
+
+// doBody issues one request with an already encoded body, so that the endpoints
+// that do not take JSON share this response and error handling. An empty
+// contentType sends no Content-Type header.
+//
+// The return values are named so that a failure to close the response body
+// still reaches the caller.
+func (c *Client) doBody(ctx context.Context, method, path string, options map[string]string, reader io.Reader, contentType string) (_ io.Reader, err error) {
 	// JoinPath keeps the /v2 prefix on the base URL; assigning to u.Path would
 	// drop it and silently send every request to the wrong place.
 	u := c.Base.JoinPath(path)
@@ -161,22 +182,13 @@ func (c *Client) do(ctx context.Context, method, path string, options map[string
 	}
 	u.RawQuery = query.Encode()
 
-	var reader io.Reader
-	if body != nil {
-		b, err := json.Marshal(body)
-		if err != nil {
-			return nil, fmt.Errorf("could not marshal body: %w", err)
-		}
-		reader = bytes.NewReader(b)
-	}
-
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), reader)
 	if err != nil {
 		return nil, fmt.Errorf("could not create request: %w", err)
 	}
 
-	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
 	}
 
 	resp, err := c.HTTP.Do(req)

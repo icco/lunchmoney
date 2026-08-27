@@ -12,6 +12,10 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// startDateParam is the query parameter the budget endpoints take a period
+// start in.
+const startDateParam = "start_date"
+
 // BudgetSummary is the budget and activity rollup for a date range. It replaces
 // the per-category, per-month Budget list v1 returned from /budgets.
 type BudgetSummary struct {
@@ -117,8 +121,8 @@ type BudgetFilters struct {
 // as GET parameters. Unset optional fields are omitted.
 func (r *BudgetFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{
-		"start_date": r.StartDate,
-		"end_date":   r.EndDate,
+		startDateParam: r.StartDate,
+		"end_date":     r.EndDate,
 	}
 
 	bools := map[string]*bool{
@@ -255,8 +259,8 @@ func (c *Client) DeleteBudget(ctx context.Context, categoryID int64, startDate s
 	}
 
 	options := map[string]string{
-		"category_id": strconv.FormatInt(categoryID, 10),
-		"start_date":  startDate,
+		"category_id":  strconv.FormatInt(categoryID, 10),
+		startDateParam: startDate,
 	}
 
 	if _, err := c.Delete(ctx, "/budgets", options); err != nil {

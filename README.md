@@ -3,40 +3,44 @@
 [![GoDoc](https://godoc.org/github.com/icco/lunchmoney?status.svg)](https://godoc.org/github.com/icco/lunchmoney)
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/lunchmoney)](https://goreportcard.com/report/github.com/icco/lunchmoney)
 
-Golang API wrapper for the [Lunch Money v2 API](https://alpha.lunchmoney.dev/introduction).
+Go client for the [Lunch Money v2 API](https://alpha.lunchmoney.dev/introduction).
 
-Create an access token on the [developers page](https://my.lunchmoney.app/developers) to use this.
+```sh
+go get github.com/icco/lunchmoney
+```
+
+## Usage
+
+Get an access token from the [developers page](https://my.lunchmoney.app/developers).
+
+```go
+client, err := lunchmoney.NewClient(os.Getenv("LUNCHMONEY_TOKEN"))
+if err != nil {
+	return err
+}
+
+resp, err := client.GetTransactions(ctx, &lunchmoney.TransactionFilters{
+	StartDate: &start,
+	EndDate:   &end,
+})
+if err != nil {
+	return err
+}
+
+for _, t := range resp.Transactions {
+	amount, err := t.ParsedAmount()
+	// ...
+}
+```
+
+Runnable examples are in [examples/](examples). Full API docs are on [GoDoc](https://godoc.org/github.com/icco/lunchmoney).
 
 ## Notes
 
- - Targets v2. v1 is not supported.
- - v2 is in open alpha and still changing. Use a test budget while getting started.
- - Reads, plus category, tag, transaction and manual account writes. PRs welcome for the rest — see the open issues.
- - Requires Go 1.25+.
+Covers the stable v2 surface: users, categories, tags, transactions (with splits, groups, deletes and attachments), manual accounts, Plaid accounts, recurring items and budgets. The preview crypto and balance history endpoints are not wrapped ([#34](https://github.com/icco/lunchmoney/issues/34)).
 
-## Migrating from v1
+Amounts are strings; `ParseCurrency` turns one into a `*money.Money` scaled to the currency's minor units. Nullable IDs are pointers. Errors wrap an `*ErrorResponse` carrying the status code, reachable with `errors.As`.
 
-v2 is not backwards compatible, so neither is this release.
+v2 is in open alpha and still changing, so use a test budget while getting started.
 
-Renames:
-
- - `GetAssets` → `GetManualAccounts`, `Asset` → `ManualAccount`. `type_name`/`subtype_name` → `Type`/`Subtype`, `exclude_transactions` → `ExcludeFromTransactions`, `depository` type → `cash`.
- - `GetRecurringExpenses` → `GetRecurringItems`, `RecurringExpense` → `RecurringItem`. Criteria, overrides and match results are now nested. Both dates are required when filtering by range.
- - `GetBudgets` → `GetBudgetSummary` (`/summary`), which returns a `BudgetSummary` rather than per-category, per-month budgets. `GetBudgetSettings` is new.
- - `GetCategories` takes filters. The API now defaults to nested, where a group carries its members in `Children`; pass `CategoryFormatFlattened` for the v1 shape.
- - On `Transaction`: `asset_id` → `ManualAccountID`, `tags` → `TagIDs`, `has_children` → `IsSplitParent`, `parent_id` → `SplitParentID`, `is_group` → `IsGroupParent`, `group_id` → `GroupParentID`.
- - On `User`: `user_id`/`user_name`/`user_email` → `ID`/`Name`/`Email`.
-
-Behaviour:
-
- - `GetTransactions` returns a `TransactionsResponse` so the `has_more` paging flag is visible. `GetTransaction` no longer takes filters, and `UpdateTransaction` returns the updated `Transaction`. Splitting moved to its own endpoint and is not wrapped here.
- - v2 does not hydrate related records onto a transaction, so the category and account name fields are gone. Use `GetCategory`, `GetManualAccount` or `GetPlaidAccount`.
- - Status `cleared`/`uncleared` → `reviewed`/`unreviewed`. `pending` and `recurring` are gone; use `IsPending`.
- - `debit_as_negative` is gone. Positive is always a debit.
- - Inserting takes tag IDs, and tags must already exist. Duplicates no longer fail the batch: accepted rows come back in `Transactions`, rejected ones in `SkippedDuplicates`.
- - `CreateCategory` covers category groups too, behind `IsGroup`; v1's `/categories/group` is gone. `UpdateCategory`'s `Children` replaces a group's members rather than adding to them.
- - `DeleteCategory` takes a `force` argument, where v1 had a `/force` path suffix. Refusing to delete a category that is still in use returns a `CategoryDependenciesError` with the counts, which `errors.As` gets at.
- - Nullable IDs are pointers, so unset is distinguishable from zero.
- - Failures arrive with a 4xx or 5xx status instead of buried in a 200, and wrap an `ErrorResponse` — `errors.As` gets the status code and per-field errors.
- - `ParseCurrency` parses exact decimals scaled to the currency's precision. v2 returns 4 decimal places, which the old float path truncated and misrounded.
- - Amounts are sent as strings. v2 also accepts a number, but one string field avoids an empty float meaning zero.
+Requires Go 1.25+. Upgrading from v0.6.x, which wrapped v1 of the API? See [UPGRADING.md](UPGRADING.md).

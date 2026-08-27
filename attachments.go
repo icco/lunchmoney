@@ -25,10 +25,8 @@ const attachmentsPath = "/transactions/attachments"
 // mime/multipart does for the parts it builds itself.
 var quoteEscaper = strings.NewReplacer("\\", "\\\\", `"`, "\\\"")
 
-// AttachFileRequest is a file to upload and attach to a transaction.
-//
-// The API rejects files over 10MB, and accepts only image/jpeg, image/png,
-// application/pdf, image/heic and image/heif.
+// AttachFileRequest is a file to attach to a transaction. The API caps files at
+// 10MB and accepts jpeg, png, pdf, heic and heif.
 type AttachFileRequest struct {
 	// Name is the filename the API stores and shows.
 	Name string `validate:"required"`

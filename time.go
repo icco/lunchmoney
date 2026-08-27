@@ -6,9 +6,8 @@ import (
 	"time"
 )
 
-// Timestamp is a time the API documents as a date-time but may also return as
-// a plain YYYY-MM-DD date. Decoding either shape into a time.Time directly
-// fails on the date-only form, which would sink the whole response.
+// Timestamp is a time the API may return as a date-time or a plain date. A
+// time.Time alone fails on the date-only form.
 type Timestamp struct {
 	time.Time
 }

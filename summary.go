@@ -205,6 +205,38 @@ type Budget struct {
 	Notes      string  `json:"notes"`
 }
 
+// UnmarshalJSON decodes a budget, accepting an amount sent as a number as well
+// as a string.
+func (b *Budget) UnmarshalJSON(data []byte) error {
+	type budget Budget
+
+	aux := struct {
+		Amount json.RawMessage `json:"amount"`
+		*budget
+	}{budget: (*budget)(b)}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if len(aux.Amount) == 0 || string(aux.Amount) == "null" {
+		return nil
+	}
+
+	if err := json.Unmarshal(aux.Amount, &b.Amount); err == nil {
+		return nil
+	}
+
+	var number json.Number
+	if err := json.Unmarshal(aux.Amount, &number); err != nil {
+		return fmt.Errorf("%s is not a valid amount: %w", aux.Amount, err)
+	}
+
+	b.Amount = number.String()
+
+	return nil
+}
+
 // ParsedAmount converts the budgeted amount and currency into a money.Money.
 func (b *Budget) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(b.Amount, b.Currency)
@@ -266,9 +298,8 @@ func (c *Client) DeleteBudget(ctx context.Context, categoryID int64, startDate s
 	return nil
 }
 
-// BudgetInvalidPeriodError is the 400 the API answers with when a start date is
-// not a period start for the account. The budget calls return one so the valid
-// dates on either side of the rejected one can be reached with errors.As.
+// BudgetInvalidPeriodError is the 400 returned when a start date is not a period
+// start. It carries the valid dates either side; reachable with errors.As.
 type BudgetInvalidPeriodError struct {
 	Message            string `json:"message"`
 	ErrMsg             string `json:"errMsg"`

@@ -66,6 +66,15 @@ func TestUpsertBudget(t *testing.T) {
 			want:     &Budget{CategoryID: 315177, StartDate: "2025-01-01", Amount: "500.0000", Currency: "usd", ToBase: 500, Notes: "Monthly groceries"},
 		},
 		{
+			// The spec's own 200 example shows the amount unquoted, so a
+			// string-only decode would fail on a budget that was written.
+			name:     "amount comes back as a number",
+			budget:   &UpsertBudget{StartDate: "2025-03-01", CategoryID: 315177, Amount: "500"},
+			wantBody: map[string]any{"start_date": "2025-03-01", "category_id": float64(315177), "amount": "500"},
+			response: `{"category_id": 315177, "start_date": "2025-03-01", "amount": 500, "currency": "usd", "to_base": 500.0, "notes": ""}`,
+			want:     &Budget{CategoryID: 315177, StartDate: "2025-03-01", Amount: "500", Currency: "usd", ToBase: 500},
+		},
+		{
 			name:     "empty notes clear the stored ones",
 			budget:   &UpsertBudget{StartDate: "2025-02-01", CategoryID: 315177, Amount: "42.5000", Notes: &cleared},
 			wantBody: map[string]any{"start_date": "2025-02-01", "category_id": float64(315177), "amount": "42.5000", "notes": ""},

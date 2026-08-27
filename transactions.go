@@ -11,9 +11,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// Transaction status values. v1's "cleared" and "uncleared" became "reviewed"
-// and "unreviewed"; its "pending" and "recurring" statuses are gone, and
-// pending transactions are now flagged by the IsPending field.
+// Transaction status values. Pending transactions are flagged by IsPending
+// rather than by a status.
 const (
 	StatusReviewed      = "reviewed"
 	StatusUnreviewed    = "unreviewed"
@@ -26,14 +25,9 @@ type TransactionsResponse struct {
 	HasMore      bool           `json:"has_more"`
 }
 
-// Transaction is a single LM transaction.
-//
-// Amounts no longer follow the account's debit_as_negative preference: a
-// positive amount is always a debit and a negative amount always a credit.
-//
-// v2 does not hydrate related records onto the transaction. The category and
-// account name fields v1 returned are gone; look them up with GetCategory,
-// GetManualAccount or GetPlaidAccount instead.
+// Transaction is a single LM transaction. A positive amount is a debit, a
+// negative one a credit. Related records are not hydrated: resolve the IDs with
+// GetCategory, GetManualAccount or GetPlaidAccount.
 type Transaction struct {
 	ID              int64   `json:"id"`
 	Date            string  `json:"date"`
@@ -242,10 +236,7 @@ type InsertTransaction struct {
 }
 
 // InsertTransactionsResponse holds the results of an InsertTransactions call.
-//
-// Unlike v1, a duplicate no longer fails the whole request: the transactions
-// that were accepted come back in Transactions, and the ones that were not are
-// reported in SkippedDuplicates.
+// Accepted rows come back in Transactions, duplicates in SkippedDuplicates.
 type InsertTransactionsResponse struct {
 	Transactions      []*Transaction     `json:"transactions"`
 	SkippedDuplicates []SkippedDuplicate `json:"skipped_duplicates"`
@@ -301,11 +292,8 @@ type UpdateTransaction struct {
 	CustomMetadata   *map[string]any `json:"custom_metadata,omitempty"`
 }
 
-// UpdateTransaction modifies an existing transaction with the specified ID and
-// returns the updated transaction.
-//
-// Splitting moved out of this call in v2. The split payload v1 accepted here
-// is now POST /transactions/split/{id}; use SplitTransaction instead.
+// UpdateTransaction modifies a transaction and returns it. Use SplitTransaction
+// to split one.
 func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) (*Transaction, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.StructCtx(ctx, ut); err != nil {
@@ -325,10 +313,8 @@ func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTran
 	return resp, nil
 }
 
-// DeleteTransaction deletes the transaction with the specified ID.
-//
-// The API refuses to delete a split or grouped transaction; unsplit or ungroup
-// it first. Deletion is not reversible.
+// DeleteTransaction deletes a transaction, irreversibly. The API refuses split
+// or grouped ones; unsplit or ungroup first.
 func (c *Client) DeleteTransaction(ctx context.Context, id int64) error {
 	if _, err := c.Delete(ctx, fmt.Sprintf("/transactions/%d", id), nil); err != nil {
 		return fmt.Errorf("delete transaction %d: %w", id, err)
@@ -337,10 +323,8 @@ func (c *Client) DeleteTransaction(ctx context.Context, id int64) error {
 	return nil
 }
 
-// DeleteTransactionsRequest deletes transactions in bulk.
-//
-// The whole request fails if any ID is repeated, does not exist, or belongs to
-// a split or grouped transaction.
+// DeleteTransactionsRequest deletes transactions in bulk. The whole request
+// fails if any ID repeats, is unknown, or is split or grouped.
 type DeleteTransactionsRequest struct {
 	IDs []int64 `json:"ids" validate:"min=1,max=500"`
 }

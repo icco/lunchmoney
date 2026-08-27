@@ -212,7 +212,8 @@ type CategoryDependenciesError struct {
 	CategoryName string             `json:"category_name"`
 	Dependents   CategoryDependents `json:"dependents"`
 
-	err error
+	// Err is the API error the dependents arrived as.
+	Err error `json:"-"`
 }
 
 // CategoryDependents counts what still refers to a category, by kind.
@@ -229,10 +230,7 @@ func (e *CategoryDependenciesError) Error() string {
 	return fmt.Sprintf("category %q still has dependents: %+v", e.CategoryName, e.Dependents)
 }
 
-// Unwrap returns the underlying ErrorResponse, so the status code stays reachable.
-func (e *CategoryDependenciesError) Unwrap() error {
-	return e.err
-}
+func (e *CategoryDependenciesError) Unwrap() error { return e.Err }
 
 // DeleteCategory deletes a category or category group. Without force the API
 // refuses to delete one that still has dependents, and the returned error is a
@@ -258,7 +256,7 @@ func categoryDependencies(err error) error {
 		return err
 	}
 
-	deps := &CategoryDependenciesError{err: err}
+	deps := &CategoryDependenciesError{Err: err}
 	if jsonErr := json.Unmarshal(apiErr.RawBody, deps); jsonErr != nil || deps.CategoryName == "" {
 		return err
 	}

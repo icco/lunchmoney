@@ -1,5 +1,4 @@
 version: "2"
-
 linters:
   enable:
     - bodyclose
@@ -7,3 +6,11 @@ linters:
     - goconst
     - gosec
     - misspell
+  exclusions:
+    rules:
+      # Table-driven tests repeat short literals constantly; goconst and dupl
+      # findings there are noise rather than signal.
+      - path: _test\.go$
+        linters:
+          - dupl
+          - goconst

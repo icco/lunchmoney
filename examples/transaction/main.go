@@ -17,5 +17,5 @@ func main() {
 		log.Panicf("err: %+v", err)
 	}
 
-	log.Printf("%+v", t)
+	log.Printf("%+v", t) //nolint:gosec // example intentionally logs the API response
 }

@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const testEndDate = "2023-12-31"
+
 func TestTransactionFilters_ToMap(t *testing.T) {
 	tagID := int64(1)
 	recurringID := int64(2)
@@ -15,7 +17,7 @@ func TestTransactionFilters_ToMap(t *testing.T) {
 	offset := int64(10)
 	limit := int64(20)
 	startDate := "2023-01-01"
-	endDate := "2023-12-31"
+	endDate := testEndDate
 	debitAsNegative := true
 
 	tests := []struct {
@@ -46,7 +48,7 @@ func TestTransactionFilters_ToMap(t *testing.T) {
 				"offset":            "10",
 				"limit":             "20",
 				"start_date":        "2023-01-01",
-				"end_date":          "2023-12-31",
+				"end_date":          testEndDate,
 				"debit_as_negative": "true",
 			},
 		},
@@ -65,7 +67,7 @@ func TestTransactionFilters_ToMap(t *testing.T) {
 			expected: map[string]string{
 				"tag_id":   "1",
 				"limit":    "20",
-				"end_date": "2023-12-31",
+				"end_date": testEndDate,
 			},
 		},
 	}

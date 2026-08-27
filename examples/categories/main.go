@@ -22,14 +22,14 @@ func main() {
 	}
 
 	for _, category := range categories {
-		log.Printf("%+v\n", category)
+		log.Printf("%+v\n", category) //nolint:gosec // example intentionally logs the API response
 	}
 
-	log.Printf("Fetching category details: %s\n", categories[0].Name)
+	log.Printf("Fetching category details: %s\n", categories[0].Name) //nolint:gosec // example intentionally logs the API response
 
 	category, err := client.GetCategory(ctx, categories[0].ID)
 	if err != nil {
 		log.Fatalf("get err: %+v", err)
 	}
-	log.Printf("%+v\n", category)
+	log.Printf("%+v\n", category) //nolint:gosec // example intentionally logs the API response
 }

@@ -324,3 +324,37 @@ func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTran
 
 	return resp, nil
 }
+
+// DeleteTransaction deletes the transaction with the specified ID.
+//
+// The API refuses to delete a split or grouped transaction; unsplit or ungroup
+// it first. Deletion is not reversible.
+func (c *Client) DeleteTransaction(ctx context.Context, id int64) error {
+	if _, err := c.Delete(ctx, fmt.Sprintf("/transactions/%d", id), nil); err != nil {
+		return fmt.Errorf("delete transaction %d: %w", id, err)
+	}
+
+	return nil
+}
+
+// DeleteTransactionsRequest deletes transactions in bulk.
+//
+// The whole request fails if any ID is repeated, does not exist, or belongs to
+// a split or grouped transaction.
+type DeleteTransactionsRequest struct {
+	IDs []int64 `json:"ids" validate:"min=1,max=500"`
+}
+
+// DeleteTransactions deletes the transactions with the specified IDs.
+func (c *Client) DeleteTransactions(ctx context.Context, dtReq DeleteTransactionsRequest) error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, dtReq); err != nil {
+		return err
+	}
+
+	if _, err := c.Delete(ctx, "/transactions", nil, dtReq); err != nil {
+		return fmt.Errorf("delete transactions: %w", err)
+	}
+
+	return nil
+}

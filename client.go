@@ -137,9 +137,15 @@ func (c *Client) Post(ctx context.Context, path string, body any) (io.Reader, er
 	return c.do(ctx, http.MethodPost, path, nil, body)
 }
 
-// Delete performs a DELETE request against the given path. v2 answers with 204 and no body.
-func (c *Client) Delete(ctx context.Context, path string, options map[string]string) (io.Reader, error) {
-	return c.do(ctx, http.MethodDelete, path, options, nil)
+// Delete performs a DELETE request against the given path, with options as query
+// parameters and an optional JSON body. v2 answers with 204 and no body.
+func (c *Client) Delete(ctx context.Context, path string, options map[string]string, body ...any) (io.Reader, error) {
+	var payload any
+	if len(body) > 0 {
+		payload = body[0]
+	}
+
+	return c.do(ctx, http.MethodDelete, path, options, payload)
 }
 
 // do issues one request. The return values are named so that a failure to

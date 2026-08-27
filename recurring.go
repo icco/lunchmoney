@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Rhymond/go-money"
@@ -48,19 +49,20 @@ type RecurringExpenseFilters struct {
 	DebitAsNegative bool   `json:"debit_as_negative"`
 }
 
-// ToMap converts the recurring expense filters to a string map to be sent with the request as
-// GET parameters. This method formats filter parameters correctly for the Lunch Money API.
-// It marshals the filter struct to JSON and then unmarshals it to a string map.
+// ToMap converts the recurring expense filters to a string map to be sent with
+// the request as GET parameters. An empty StartDate is omitted.
+//
+// The map is built field by field rather than marshaled through JSON: a
+// map[string]string cannot hold the JSON bool that DebitAsNegative encodes to,
+// so the round trip failed for every input, including the zero value.
 func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
-	b, err := json.Marshal(r)
-	if err != nil {
-		return nil, err
+
+	if r.StartDate != "" {
+		ret["start_date"] = r.StartDate
 	}
 
-	if err := json.Unmarshal(b, &ret); err != nil {
-		return nil, err
-	}
+	ret["debit_as_negative"] = strconv.FormatBool(r.DebitAsNegative)
 
 	return ret, nil
 }

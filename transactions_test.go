@@ -222,3 +222,102 @@ func TestUpdateTransaction(t *testing.T) {
 	assert.Equal(t, int64(42), got.ID)
 	assert.Equal(t, "Rent", got.Payee)
 }
+
+func TestDeleteTransactions(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		wantBody string
+		del      func(*Client) error
+	}{
+		{
+			name: "single",
+			path: "/transactions/42",
+			del: func(c *Client) error {
+				return c.DeleteTransaction(context.Background(), 42)
+			},
+		},
+		{
+			name:     "bulk",
+			path:     "/transactions",
+			wantBody: `{"ids": [1, 2, 3]}`,
+			del: func(c *Client) error {
+				return c.DeleteTransactions(context.Background(), DeleteTransactionsRequest{IDs: []int64{1, 2, 3}})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotBody := ""
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodDelete, r.Method)
+				assert.Equal(t, tt.path, r.URL.Path)
+				// Neither delete endpoint takes query parameters.
+				assert.Empty(t, r.URL.RawQuery)
+
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				gotBody = string(body)
+
+				// 204 with no body at all, which is what the API sends.
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
+
+			require.NoError(t, tt.del(testClient(t, server)))
+
+			if tt.wantBody == "" {
+				assert.Empty(t, gotBody)
+				return
+			}
+			assert.JSONEq(t, tt.wantBody, gotBody)
+		})
+	}
+}
+
+func TestDeleteTransactionsIDBounds(t *testing.T) {
+	ids := func(n int) []int64 {
+		out := make([]int64, n)
+		for i := range out {
+			out[i] = int64(i + 1)
+		}
+
+		return out
+	}
+
+	tests := []struct {
+		name    string
+		ids     []int64
+		wantErr bool
+	}{
+		{name: "nil", ids: nil, wantErr: true},
+		{name: "empty", ids: []int64{}, wantErr: true},
+		{name: "one", ids: ids(1)},
+		{name: "five hundred", ids: ids(500)},
+		{name: "five hundred and one", ids: ids(501), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			called := false
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				called = true
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
+
+			err := testClient(t, server).DeleteTransactions(context.Background(), DeleteTransactionsRequest{IDs: tt.ids})
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "IDs")
+				assert.False(t, called, "out of bounds ids should be rejected before the request")
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.True(t, called)
+		})
+	}
+}

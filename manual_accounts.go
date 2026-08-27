@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/Rhymond/go-money"
@@ -76,6 +77,44 @@ func (c *Client) GetManualAccount(ctx context.Context, id int64) (*ManualAccount
 	return resp, nil
 }
 
+// CreateManualAccount describes a new manual account. Name, Type and Balance
+// are required; only non-nil optional fields are sent.
+type CreateManualAccount struct {
+	Name                    string          `json:"name" validate:"required,min=1,max=45"`
+	InstitutionName         *string         `json:"institution_name,omitempty" validate:"omitnil,min=1,max=50"`
+	DisplayName             *string         `json:"display_name,omitempty"`
+	Type                    string          `json:"type" validate:"required,oneof='cash' 'credit' 'cryptocurrency' 'employee compensation' 'investment' 'loan' 'other liability' 'other asset' 'real estate' 'vehicle'"`
+	Subtype                 *string         `json:"subtype,omitempty" validate:"omitnil,min=1,max=100"`
+	Balance                 string          `json:"balance" validate:"required"`
+	Currency                *string         `json:"currency,omitempty" validate:"omitnil,len=3"`
+	BalanceAsOf             *string         `json:"balance_as_of,omitempty"`
+	Status                  *string         `json:"status,omitempty" validate:"omitnil,oneof=active closed"`
+	ClosedOn                *string         `json:"closed_on,omitempty"`
+	ExternalID              *string         `json:"external_id,omitempty" validate:"omitnil,max=75"`
+	CustomMetadata          *map[string]any `json:"custom_metadata,omitempty"`
+	ExcludeFromTransactions *bool           `json:"exclude_from_transactions,omitempty"`
+}
+
+// CreateManualAccount creates a manual account and returns it.
+func (c *Client) CreateManualAccount(ctx context.Context, account *CreateManualAccount) (*ManualAccount, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, account); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Post(ctx, "/manual_accounts", account)
+	if err != nil {
+		return nil, fmt.Errorf("create manual account: %w", err)
+	}
+
+	resp := &ManualAccount{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}
+
 // UpdateManualAccount contains the fields that can be updated for an existing
 // manual account. Only non-nil fields are sent in the update request.
 type UpdateManualAccount struct {
@@ -112,4 +151,48 @@ func (c *Client) UpdateManualAccount(ctx context.Context, id int64, account *Upd
 	}
 
 	return resp, nil
+}
+
+// DeleteManualAccountOptions are options to pass to a delete request. Both
+// default to false, and deleting items cannot be undone.
+type DeleteManualAccountOptions struct {
+	// DeleteItems also deletes the transactions, rules and recurring items
+	// associated with the account.
+	DeleteItems          *bool
+	DeleteBalanceHistory *bool
+}
+
+// ToMap converts the delete options to a string map to be sent with the
+// request as query parameters. Unset fields are omitted.
+func (o *DeleteManualAccountOptions) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+
+	if o.DeleteItems != nil {
+		ret["delete_items"] = strconv.FormatBool(*o.DeleteItems)
+	}
+
+	if o.DeleteBalanceHistory != nil {
+		ret["delete_balance_history"] = strconv.FormatBool(*o.DeleteBalanceHistory)
+	}
+
+	return ret, nil
+}
+
+// DeleteManualAccount deletes the manual account with the given ID.
+func (c *Client) DeleteManualAccount(ctx context.Context, id int64, opts *DeleteManualAccountOptions) error {
+	options := map[string]string{}
+	if opts != nil {
+		maps, err := opts.ToMap()
+		if err != nil {
+			return fmt.Errorf("convert options to map: %w", err)
+		}
+		options = maps
+	}
+
+	// A successful delete answers with 204 and no body, so there is nothing to decode.
+	if _, err := c.Delete(ctx, fmt.Sprintf("/manual_accounts/%d", id), options); err != nil {
+		return fmt.Errorf("delete manual account %d: %w", id, err)
+	}
+
+	return nil
 }

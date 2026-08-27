@@ -101,10 +101,9 @@ func TestAttachFileToTransaction(t *testing.T) {
 				assert.Equal(t, "/transactions/42/attachments", r.URL.Path)
 				assert.True(t, strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data;"))
 
-				require.NoError(t, r.ParseMultipartForm(1<<20))
-
-				// The spec names the file field "file"; the server has to see a
-				// well formed part under that name, not just the right header.
+				// The spec names the file field "file". FormFile parses the
+				// multipart body, so the server has to see a well formed part
+				// under that name, not just the right header.
 				file, header, err := r.FormFile("file")
 				require.NoError(t, err)
 				defer func() { require.NoError(t, file.Close()) }()

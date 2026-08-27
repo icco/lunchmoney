@@ -74,9 +74,8 @@ func (r *CategoryFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetCategories returns all categories. Unlike v1 the API defaults to the
-// nested format, where groups carry their members in Children; pass
-// CategoryFormatFlattened for the old shape.
+// GetCategories returns all categories, nested by default. Pass
+// CategoryFormatFlattened for the v1 shape.
 func (c *Client) GetCategories(ctx context.Context, filters *CategoryFilters) ([]*Category, error) {
 	options := map[string]string{}
 	if filters != nil {
@@ -162,8 +161,7 @@ func (c *Client) CreateCategory(ctx context.Context, category *CreateCategory) (
 }
 
 // UpdateCategory holds the updatable fields of a category. Only non-nil fields
-// are sent. A category cannot be converted to a group or back, so IsGroup is
-// not updatable.
+// are sent; IsGroup is absent because a category cannot become a group.
 type UpdateCategory struct {
 	Name              *string `json:"name,omitempty" validate:"omitnil,min=1,max=100"`
 	Description       *string `json:"description,omitempty" validate:"omitnil,max=200"`
@@ -204,10 +202,8 @@ func (c *Client) UpdateCategory(ctx context.Context, id int64, category *UpdateC
 	return resp, nil
 }
 
-// CategoryDependenciesError is the 422 the API answers with when a category
-// cannot be deleted because things still reference it. DeleteCategory returns
-// one so the counts can be inspected with errors.As; deleting with force set
-// removes the category anyway.
+// CategoryDependenciesError is the 422 returned when a category still has
+// dependents. Reachable with errors.As; force deletes it anyway.
 type CategoryDependenciesError struct {
 	CategoryName string             `json:"category_name"`
 	Dependents   CategoryDependents `json:"dependents"`
@@ -232,9 +228,8 @@ func (e *CategoryDependenciesError) Error() string {
 
 func (e *CategoryDependenciesError) Unwrap() error { return e.Err }
 
-// DeleteCategory deletes a category or category group. Without force the API
-// refuses to delete one that still has dependents, and the returned error is a
-// CategoryDependenciesError describing them.
+// DeleteCategory deletes a category or group. Without force, one with
+// dependents returns a *CategoryDependenciesError.
 func (c *Client) DeleteCategory(ctx context.Context, id int64, force bool) error {
 	options := map[string]string{}
 	if force {

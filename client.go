@@ -66,9 +66,8 @@ func NewClient(apikey string) (*Client, error) {
 	}, nil
 }
 
-// ErrorResponse is the body the v2 API returns alongside a 4xx or 5xx status.
-// Failing calls wrap one, so errors.As gets at the status code and the
-// individual problems the API reported.
+// ErrorResponse is the body the v2 API returns with a 4xx or 5xx. Failing calls
+// wrap one, reachable with errors.As.
 type ErrorResponse struct {
 	Message string       `json:"message"`
 	Errors  []ErrorEntry `json:"errors,omitempty"`
@@ -165,12 +164,8 @@ func (c *Client) do(ctx context.Context, method, path string, options map[string
 	return c.doBody(ctx, method, path, options, reader, contentType)
 }
 
-// doBody issues one request with an already encoded body, so that the endpoints
-// that do not take JSON share this response and error handling. An empty
-// contentType sends no Content-Type header.
-//
-// The return values are named so that a failure to close the response body
-// still reaches the caller.
+// doBody issues a request with an already encoded body, shared by the JSON and
+// multipart paths. An empty contentType sends no Content-Type header.
 func (c *Client) doBody(ctx context.Context, method, path string, options map[string]string, reader io.Reader, contentType string) (_ io.Reader, err error) {
 	// JoinPath keeps the /v2 prefix on the base URL; assigning to u.Path would
 	// drop it and silently send every request to the wrong place.
@@ -237,10 +232,8 @@ func (c *Client) doBody(ctx context.Context, method, path string, options map[st
 	return &buf, nil
 }
 
-// ParseCurrency converts a string amount and currency code into a money.Money
-// struct. The amount is parsed as an exact decimal rather than a float so that
-// the four decimal places the v2 API returns do not pick up rounding error, and
-// is scaled to the number of minor units the currency actually uses.
+// ParseCurrency converts an amount and currency code into a money.Money, parsed
+// as an exact decimal and scaled to the currency's minor units.
 func ParseCurrency(amount, currency string) (*money.Money, error) {
 	// go-money falls back to two minor units for codes it does not know, so
 	// match that rather than dereferencing a nil currency.
@@ -257,9 +250,8 @@ func ParseCurrency(amount, currency string) (*money.Money, error) {
 	return money.New(units, currency), nil
 }
 
-// parseDecimal converts a decimal string into an integer number of minor units,
-// rounding half away from zero when the string carries more precision than the
-// currency has room for.
+// parseDecimal converts a decimal string to minor units, rounding half away
+// from zero.
 func parseDecimal(amount string, fraction int) (int64, error) {
 	s := strings.TrimSpace(amount)
 	if s == "" {

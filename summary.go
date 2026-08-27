@@ -205,10 +205,8 @@ type Budget struct {
 	Notes      string  `json:"notes"`
 }
 
-// UnmarshalJSON decodes a budget, accepting an amount given as a JSON number
-// as well as the string the schema documents. The upsert response is the one
-// place the API's own example shows an unquoted amount, and a failed decode
-// there would report an error for a budget that was in fact written.
+// UnmarshalJSON decodes a budget, accepting an amount sent as a number as well
+// as a string.
 func (b *Budget) UnmarshalJSON(data []byte) error {
 	type budget Budget
 
@@ -300,9 +298,8 @@ func (c *Client) DeleteBudget(ctx context.Context, categoryID int64, startDate s
 	return nil
 }
 
-// BudgetInvalidPeriodError is the 400 the API answers with when a start date is
-// not a period start for the account. The budget calls return one so the valid
-// dates on either side of the rejected one can be reached with errors.As.
+// BudgetInvalidPeriodError is the 400 returned when a start date is not a period
+// start. It carries the valid dates either side; reachable with errors.As.
 type BudgetInvalidPeriodError struct {
 	Message            string `json:"message"`
 	ErrMsg             string `json:"errMsg"`

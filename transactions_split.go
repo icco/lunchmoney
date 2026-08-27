@@ -57,11 +57,8 @@ func (c *Client) UnsplitTransaction(ctx context.Context, id int64) error {
 	return nil
 }
 
-// GroupTransactionsRequest groups existing transactions into a new one. Date
-// and Payee are sent even when empty: the API requires both keys, and an empty
-// payee is allowed.
-//
-// v1 took the IDs under a "transactions" key.
+// GroupTransactionsRequest groups transactions into a new one. Date and Payee
+// are sent even when empty; the API requires both keys.
 type GroupTransactionsRequest struct {
 	IDs        []int64 `json:"ids" validate:"min=2,max=500"`
 	Date       string  `json:"date" validate:"datetime=2006-01-02"`

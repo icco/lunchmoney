@@ -16,10 +16,8 @@ type RecurringItemsResponse struct {
 	RecurringItems []*RecurringItem `json:"recurring_items"`
 }
 
-// RecurringItem is a transaction that is scheduled to happen repeatedly. In v1
-// of the API these were called recurring expenses, and the criteria that
-// identify a matching transaction were flat fields on this object rather than
-// the nested TransactionCriteria.
+// RecurringItem is a transaction scheduled to happen repeatedly. v1 called
+// these recurring expenses and kept the criteria flat.
 type RecurringItem struct {
 	ID          int64  `json:"id"`
 	Description string `json:"description"`
@@ -84,9 +82,8 @@ func (r *RecurringItem) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(r.TransactionCriteria.Amount, r.TransactionCriteria.Currency)
 }
 
-// RecurringItemFilters are options to pass to the request. StartDate and
-// EndDate must be given together; v2 no longer accepts a start date alone, and
-// the debit_as_negative option is gone.
+// RecurringItemFilters are options for the request. StartDate and EndDate must
+// be given together.
 type RecurringItemFilters struct {
 	StartDate        string `validate:"required_with=EndDate,omitempty,datetime=2006-01-02"`
 	EndDate          string `validate:"required_with=StartDate,omitempty,datetime=2006-01-02"`

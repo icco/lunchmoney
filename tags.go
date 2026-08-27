@@ -89,8 +89,7 @@ func (c *Client) CreateTag(ctx context.Context, tag *CreateTag) (*Tag, error) {
 }
 
 // UpdateTag holds the updatable fields of a tag. Only non-nil fields are sent,
-// which also means there is no way to send an explicit null: leaving ArchivedAt
-// nil keeps the stored value rather than clearing it.
+// so a nil ArchivedAt keeps the stored value rather than clearing it.
 type UpdateTag struct {
 	Name            *string    `json:"name,omitempty" validate:"omitnil,min=1,max=100"`
 	Description     *string    `json:"description,omitempty" validate:"omitnil,max=200"`
@@ -142,9 +141,8 @@ func (e *TagInUseError) Error() string {
 
 func (e *TagInUseError) Unwrap() error { return e.Err }
 
-// DeleteTag deletes the tag with the given ID. Without force the API refuses to
-// delete a tag that rules or transactions still reference, and the returned
-// error is a *TagInUseError naming what depends on it.
+// DeleteTag deletes a tag. Without force, one that rules or transactions
+// reference returns a *TagInUseError.
 func (c *Client) DeleteTag(ctx context.Context, id int64, force bool) error {
 	options := map[string]string{}
 	if force {

@@ -125,9 +125,8 @@ func IsTooEarly(err error) bool {
 	return errors.As(err, &resp) && resp.StatusCode == http.StatusTooEarly
 }
 
-// TriggerPlaidFetch queues a background fetch of the latest data from Plaid.
-// The API answers 425 Too Early if a fetch was triggered within the last
-// minute; check for that with IsTooEarly.
+// TriggerPlaidFetch queues a background fetch from Plaid. It answers 425 if one
+// was triggered in the last minute; check with IsTooEarly.
 func (c *Client) TriggerPlaidFetch(ctx context.Context, filters *PlaidFetchFilters) ([]*PlaidAccount, error) {
 	options := map[string]string{}
 	if filters != nil {

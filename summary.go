@@ -3,7 +3,9 @@ package lunchmoney
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/Rhymond/go-money"
@@ -191,4 +193,135 @@ func (c *Client) GetBudgetSettings(ctx context.Context) (*BudgetSettings, error)
 	}
 
 	return resp, nil
+}
+
+// Budget is a single category's budget for one period.
+type Budget struct {
+	CategoryID int64   `json:"category_id"`
+	StartDate  string  `json:"start_date"`
+	Amount     string  `json:"amount"`
+	Currency   string  `json:"currency"`
+	ToBase     float64 `json:"to_base"`
+	Notes      string  `json:"notes"`
+}
+
+// ParsedAmount converts the budgeted amount and currency into a money.Money.
+func (b *Budget) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(b.Amount, b.Currency)
+}
+
+// UpsertBudget is a budget to set. StartDate has to be a period start for the
+// account, which GetBudgetSettings describes.
+type UpsertBudget struct {
+	StartDate  string `json:"start_date" validate:"required,datetime=2006-01-02"`
+	CategoryID int64  `json:"category_id" validate:"required"`
+	Amount     string `json:"amount" validate:"required"`
+
+	// Currency defaults to the account's primary currency when empty.
+	Currency string `json:"currency,omitempty"`
+
+	// Notes is a pointer so that an empty string clears the stored notes
+	// rather than being indistinguishable from leaving them alone.
+	Notes *string `json:"notes,omitempty" validate:"omitnil,max=350"`
+}
+
+// UpsertBudget sets the budget for a category and period, creating it if there
+// is none, and returns it.
+func (c *Client) UpsertBudget(ctx context.Context, budget *UpsertBudget) (*Budget, error) {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, budget); err != nil {
+		return nil, err
+	}
+
+	body, err := c.Put(ctx, "/budgets", budget)
+	if err != nil {
+		return nil, fmt.Errorf("upsert budget: %w", budgetInvalidPeriod(err))
+	}
+
+	resp := &Budget{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}
+
+// DeleteBudget removes the budget for a category and period. Removing a budget
+// that is not set succeeds.
+func (c *Client) DeleteBudget(ctx context.Context, categoryID int64, startDate string) error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.VarCtx(ctx, startDate, "required,datetime=2006-01-02"); err != nil {
+		return err
+	}
+
+	options := map[string]string{
+		"category_id":  strconv.FormatInt(categoryID, 10),
+		queryStartDate: startDate,
+	}
+
+	if _, err := c.Delete(ctx, "/budgets", options); err != nil {
+		return fmt.Errorf("delete budget: %w", budgetInvalidPeriod(err))
+	}
+
+	return nil
+}
+
+// BudgetInvalidPeriodError is the 400 the API answers with when a start date is
+// not a period start for the account. The budget calls return one so the valid
+// dates on either side of the rejected one can be reached with errors.As.
+type BudgetInvalidPeriodError struct {
+	Message            string `json:"message"`
+	ErrMsg             string `json:"errMsg"`
+	RequestedStartDate string `json:"requested_start_date"`
+
+	// PreviousValidStartDate and NextValidStartDate are empty when the
+	// requested date has no valid period start before or after it.
+	PreviousValidStartDate string `json:"previous_valid_start_date"`
+	NextValidStartDate     string `json:"next_valid_start_date"`
+
+	// Err is the API error the period details arrived as.
+	Err error `json:"-"`
+}
+
+func (e *BudgetInvalidPeriodError) Error() string {
+	return fmt.Sprintf("%s (requested %q, previous valid %q, next valid %q)", e.ErrMsg, e.RequestedStartDate, e.PreviousValidStartDate, e.NextValidStartDate)
+}
+
+func (e *BudgetInvalidPeriodError) Unwrap() error { return e.Err }
+
+// budgetInvalidPeriod replaces a 400 that carries period details with them, and
+// passes any other error, a plain validation 400 included, through untouched.
+func budgetInvalidPeriod(err error) error {
+	var apiErr *ErrorResponse
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
+		return err
+	}
+
+	period := &BudgetInvalidPeriodError{Err: err}
+	if jsonErr := json.Unmarshal(apiErr.RawBody, period); jsonErr == nil && period.RequestedStartDate != "" {
+		return period
+	}
+
+	// The API documents this 400 as either the flat shape above or an ordinary
+	// error body with the period details on the entry, so check there too.
+	for _, entry := range apiErr.Errors {
+		requested, _ := entry.Extra["requested_start_date"].(string)
+		if requested == "" {
+			continue
+		}
+
+		previous, _ := entry.Extra["previous_valid_start_date"].(string)
+		next, _ := entry.Extra["next_valid_start_date"].(string)
+
+		return &BudgetInvalidPeriodError{
+			Message:                apiErr.Message,
+			ErrMsg:                 entry.Message,
+			RequestedStartDate:     requested,
+			PreviousValidStartDate: previous,
+			NextValidStartDate:     next,
+			Err:                    err,
+		}
+	}
+
+	return err
 }

@@ -305,7 +305,7 @@ type UpdateTransaction struct {
 // returns the updated transaction.
 //
 // Splitting moved out of this call in v2. The split payload v1 accepted here
-// is now POST /transactions/split/{id}, which this library does not wrap yet.
+// is now POST /transactions/split/{id}; use SplitTransaction instead.
 func (c *Client) UpdateTransaction(ctx context.Context, id int64, ut *UpdateTransaction) (*Transaction, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.StructCtx(ctx, ut); err != nil {

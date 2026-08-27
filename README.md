@@ -11,7 +11,7 @@ Create an access token on the [developers page](https://my.lunchmoney.app/develo
 
  - Targets v2. v1 is not supported.
  - v2 is in open alpha and still changing. Use a test budget while getting started.
- - Reads, plus updating transactions and manual accounts. PRs welcome for the rest — see the open issues.
+ - Reads, plus category writes and updating transactions and manual accounts. PRs welcome for the rest — see the open issues.
  - Requires Go 1.25+.
 
 ## Migrating from v1
@@ -34,6 +34,8 @@ Behaviour:
  - Status `cleared`/`uncleared` → `reviewed`/`unreviewed`. `pending` and `recurring` are gone; use `IsPending`.
  - `debit_as_negative` is gone. Positive is always a debit.
  - Inserting takes tag IDs, and tags must already exist. Duplicates no longer fail the batch: accepted rows come back in `Transactions`, rejected ones in `SkippedDuplicates`.
+ - `CreateCategory` covers category groups too, behind `IsGroup`; v1's `/categories/group` is gone. `UpdateCategory`'s `Children` replaces a group's members rather than adding to them.
+ - `DeleteCategory` takes a `force` argument, where v1 had a `/force` path suffix. Refusing to delete a category that is still in use returns a `CategoryDependenciesError` with the counts, which `errors.As` gets at.
  - Nullable IDs are pointers, so unset is distinguishable from zero.
  - Failures arrive with a 4xx or 5xx status instead of buried in a 200, and wrap an `ErrorResponse` — `errors.As` gets the status code and per-field errors.
  - `ParseCurrency` parses exact decimals scaled to the currency's precision. v2 returns 4 decimal places, which the old float path truncated and misrounded.

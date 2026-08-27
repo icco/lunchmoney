@@ -3,7 +3,9 @@ package lunchmoney
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -200,4 +202,66 @@ func (c *Client) UpdateCategory(ctx context.Context, id int64, category *UpdateC
 	}
 
 	return resp, nil
+}
+
+// CategoryDependenciesError is the 422 the API answers with when a category
+// cannot be deleted because things still reference it. DeleteCategory returns
+// one so the counts can be inspected with errors.As; deleting with force set
+// removes the category anyway.
+type CategoryDependenciesError struct {
+	CategoryName string             `json:"category_name"`
+	Dependents   CategoryDependents `json:"dependents"`
+
+	err error
+}
+
+// CategoryDependents counts what still refers to a category, by kind.
+type CategoryDependents struct {
+	Budget        int64 `json:"budget"`
+	CategoryRules int64 `json:"category_rules"`
+	Transactions  int64 `json:"transactions"`
+	Children      int64 `json:"children"`
+	Recurring     int64 `json:"recurring"`
+	PlaidCats     int64 `json:"plaid_cats"`
+}
+
+func (e *CategoryDependenciesError) Error() string {
+	return fmt.Sprintf("category %q still has dependents: %+v", e.CategoryName, e.Dependents)
+}
+
+// Unwrap returns the underlying ErrorResponse, so the status code stays reachable.
+func (e *CategoryDependenciesError) Unwrap() error {
+	return e.err
+}
+
+// DeleteCategory deletes a category or category group. Without force the API
+// refuses to delete one that still has dependents, and the returned error is a
+// CategoryDependenciesError describing them.
+func (c *Client) DeleteCategory(ctx context.Context, id int64, force bool) error {
+	options := map[string]string{}
+	if force {
+		options["force"] = "true"
+	}
+
+	if _, err := c.Delete(ctx, fmt.Sprintf("/categories/%d", id), options); err != nil {
+		return fmt.Errorf("delete category %d: %w", id, categoryDependencies(err))
+	}
+
+	return nil
+}
+
+// categoryDependencies replaces a 422 with the dependency counts it carries,
+// and passes any other error through untouched.
+func categoryDependencies(err error) error {
+	var apiErr *ErrorResponse
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusUnprocessableEntity {
+		return err
+	}
+
+	deps := &CategoryDependenciesError{err: err}
+	if jsonErr := json.Unmarshal(apiErr.RawBody, deps); jsonErr != nil || deps.CategoryName == "" {
+		return err
+	}
+
+	return deps
 }

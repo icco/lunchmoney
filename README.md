@@ -11,7 +11,7 @@ Create an access token on the [developers page](https://my.lunchmoney.app/develo
 
  - Targets v2. v1 is not supported.
  - v2 is in open alpha and still changing. Use a test budget while getting started.
- - Reads, plus category writes and transaction and manual account updates. PRs welcome for the rest — see the open issues.
+ - Reads, plus category, tag, transaction and manual account writes. PRs welcome for the rest — see the open issues.
  - Requires Go 1.25+.
 
 ## Migrating from v1

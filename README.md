@@ -30,7 +30,8 @@ The v2 API is not backwards compatible with v1, so neither is this release. The 
  - `debit_as_negative` is gone everywhere. A positive amount is always a debit and a negative amount always a credit.
  - Inserting transactions takes tag IDs, not tag names, and tags must already exist. A duplicate no longer fails the whole request: accepted rows come back in `Transactions` and rejected ones in `SkippedDuplicates`.
  - On `User`: `user_id`, `user_name` and `user_email` are now `ID`, `Name` and `Email`.
- - `ErrorResponse` matches the v2 error body, and failures now arrive with a 4xx or 5xx status instead of being buried in a 200.
+ - `ErrorResponse` matches the v2 error body, and failures now arrive with a 4xx or 5xx status instead of being buried in a 200. A failing call wraps the decoded response, so `errors.As` gets you the status code and the individual problems the API reported.
+ - Amounts are sent as strings. v2 also accepts a JSON number, but a single string field avoids the ambiguity of an empty float meaning zero.
  - `ParseCurrency` parses amounts as exact decimals rather than through a float, and scales to the currency's own precision. v2 returns amounts to four decimal places, which the old float path both truncated and misrounded.
 
 ## Not yet wrapped

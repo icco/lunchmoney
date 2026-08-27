@@ -18,6 +18,6 @@ func main() {
 	}
 
 	for _, t := range ts {
-		log.Printf("%+v", t)
+		log.Printf("%+v", t) //nolint:gosec // example intentionally logs the API response
 	}
 }

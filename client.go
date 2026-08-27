@@ -22,6 +22,11 @@ const (
 
 	// userAgent identifies this library to the API.
 	userAgent = "github.com/icco/lunchmoney"
+
+	// queryStartDate and queryEndDate name the date range query parameters
+	// that several endpoints share.
+	queryStartDate = "start_date"
+	queryEndDate   = "end_date"
 )
 
 type addAuthHeaderTransport struct {
@@ -70,6 +75,10 @@ type ErrorResponse struct {
 
 	// StatusCode is the HTTP status the body arrived with.
 	StatusCode int `json:"-"`
+
+	// RawBody is the undecoded error body, for the endpoints that answer a
+	// failure with a shape of their own rather than message and errors.
+	RawBody []byte `json:"-"`
 }
 
 // ErrorEntry is a single problem reported inside an ErrorResponse. The API is
@@ -128,9 +137,15 @@ func (c *Client) Post(ctx context.Context, path string, body any) (io.Reader, er
 	return c.do(ctx, http.MethodPost, path, nil, body)
 }
 
-// Delete performs a DELETE request against the given path. v2 answers with 204 and no body.
-func (c *Client) Delete(ctx context.Context, path string, options map[string]string) (io.Reader, error) {
-	return c.do(ctx, http.MethodDelete, path, options, nil)
+// Delete performs a DELETE request against the given path, with options as query
+// parameters and an optional JSON body. v2 answers with 204 and no body.
+func (c *Client) Delete(ctx context.Context, path string, options map[string]string, body ...any) (io.Reader, error) {
+	var payload any
+	if len(body) > 0 {
+		payload = body[0]
+	}
+
+	return c.do(ctx, http.MethodDelete, path, options, payload)
 }
 
 // do issues one request with body encoded as JSON.
@@ -198,7 +213,7 @@ func (c *Client) doBody(ctx context.Context, method, path string, options map[st
 	// v2 reports failures with a 4xx or 5xx status rather than an error
 	// embedded in a 200, and answers writes with 201 or 204.
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		errResp := &ErrorResponse{StatusCode: resp.StatusCode}
+		errResp := &ErrorResponse{StatusCode: resp.StatusCode, RawBody: buf.Bytes()}
 		if err := json.Unmarshal(buf.Bytes(), errResp); err != nil {
 			// Not the documented error body: a proxy or gateway may have
 			// answered instead, so pass along whatever it said.
@@ -209,11 +224,14 @@ func (c *Client) doBody(ctx context.Context, method, path string, options map[st
 			return nil, fmt.Errorf("%s", resp.Status)
 		}
 
+		// Wrap even when the body carried no message of its own, so that
+		// errors.As still reaches the status code and the raw body.
+		prefix := resp.Status
 		if errResp.Error() != "" {
-			return nil, fmt.Errorf("%s: %w", resp.Status, errResp)
+			prefix += ": "
 		}
 
-		return nil, fmt.Errorf("%s", resp.Status)
+		return nil, fmt.Errorf("%s%w", prefix, errResp)
 	}
 
 	return &buf, nil

@@ -3,10 +3,15 @@ package lunchmoney
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Rhymond/go-money"
+	"github.com/go-playground/validator/v10"
 )
 
 // PlaidAccountsResponse is a list plaid accounts response.
@@ -74,4 +79,82 @@ func (c *Client) GetPlaidAccount(ctx context.Context, id int64) (*PlaidAccount, 
 	}
 
 	return resp, nil
+}
+
+// PlaidFetchFilters narrows what TriggerPlaidFetch asks Plaid for. All fields
+// are optional; a nil filter fetches every eligible account.
+type PlaidFetchFilters struct {
+	// StartDate and EndDate bound the transactions to fetch. The API requires
+	// both or neither, so required_with comes before omitnil: omitnil
+	// short-circuits the rest of the tag when the field is nil, which is
+	// exactly the case the pairing rule has to catch.
+	StartDate *string `validate:"required_with=EndDate,omitnil,datetime=2006-01-02"`
+	EndDate   *string `validate:"required_with=StartDate,omitnil,datetime=2006-01-02"`
+
+	// ID limits the fetch to a single Plaid account.
+	ID *int64
+}
+
+// ToMap converts the filters to a string map to be sent as query parameters.
+// If a field is nil, it will not be included in the map.
+func (r *PlaidFetchFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+
+	strs := map[string]*string{
+		queryStartDate: r.StartDate,
+		queryEndDate:   r.EndDate,
+	}
+	for k, v := range strs {
+		if v != nil {
+			ret[k] = *v
+		}
+	}
+
+	if r.ID != nil {
+		ret["id"] = strconv.FormatInt(*r.ID, 10)
+	}
+
+	return ret, nil
+}
+
+// IsTooEarly reports whether err is a 425 Too Early response, which the API
+// returns when a Plaid fetch was already triggered within the last minute.
+func IsTooEarly(err error) bool {
+	var resp *ErrorResponse
+
+	return errors.As(err, &resp) && resp.StatusCode == http.StatusTooEarly
+}
+
+// TriggerPlaidFetch queues a background fetch of the latest data from Plaid.
+// The API answers 425 Too Early if a fetch was triggered within the last
+// minute; check for that with IsTooEarly.
+func (c *Client) TriggerPlaidFetch(ctx context.Context, filters *PlaidFetchFilters) ([]*PlaidAccount, error) {
+	options := map[string]string{}
+	if filters != nil {
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.StructCtx(ctx, filters); err != nil {
+			return nil, err
+		}
+
+		maps, err := filters.ToMap()
+		if err != nil {
+			return nil, fmt.Errorf("convert filters to map: %w", err)
+		}
+		options = maps
+	}
+
+	// The filters are query parameters on a POST, which Client.Post cannot
+	// express.
+	body, err := c.do(ctx, http.MethodPost, "/plaid_accounts/fetch", options, nil)
+	if err != nil {
+		return nil, fmt.Errorf("trigger plaid fetch: %w", err)
+	}
+
+	// The spec documents no body on the 202, so an empty one is not an error.
+	resp := &PlaidAccountsResponse{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp.PlaidAccounts, nil
 }

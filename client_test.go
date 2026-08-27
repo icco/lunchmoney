@@ -117,6 +117,27 @@ func TestClientErrorIsInspectable(t *testing.T) {
 	assert.Equal(t, float64(42), apiErr.Errors[0].Extra["id"])
 }
 
+func TestClientErrorKeepsRawBody(t *testing.T) {
+	// Some endpoints answer a failure with a shape of their own, which only
+	// the caller knows how to read.
+	body := `{"category_name": "Rent", "dependents": {"transactions": 10}}`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		_, err := w.Write([]byte(body))
+		require.NoError(t, err)
+	}))
+	defer server.Close()
+
+	_, err := testClient(t, server).Delete(context.Background(), "/categories/83", nil)
+	require.Error(t, err)
+
+	var apiErr *ErrorResponse
+	require.True(t, errors.As(err, &apiErr))
+	assert.Equal(t, http.StatusUnprocessableEntity, apiErr.StatusCode)
+	assert.JSONEq(t, body, string(apiErr.RawBody))
+}
+
 func TestParseCurrency(t *testing.T) {
 	tests := []struct {
 		name     string

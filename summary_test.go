@@ -24,6 +24,19 @@ const invalidPeriodBody = `{
 	"next_valid_start_date": "2025-02-01"
 }`
 
+// invalidPeriodNestedBody is the same error in the other shape the API
+// documents for it, with the period details on the error entry rather than at
+// the top level. Both the upsert and delete examples in the spec use this one.
+const invalidPeriodNestedBody = `{
+	"message": "Invalid Request",
+	"errors": [{
+		"errMsg": "The requested start date is not a valid budget period start for this account.",
+		"requested_start_date": "2025-01-15",
+		"previous_valid_start_date": "2025-01-01",
+		"next_valid_start_date": "2025-02-01"
+	}]
+}`
+
 func TestUpsertBudget(t *testing.T) {
 	notes := "Monthly groceries"
 	cleared := ""
@@ -90,6 +103,15 @@ func TestUpsertBudget(t *testing.T) {
 			wantBody:    map[string]any{"start_date": "2025-01-15", "category_id": float64(315177), "amount": "500"},
 			statusCode:  http.StatusBadRequest,
 			response:    invalidPeriodBody,
+			errContains: "not a valid budget period start",
+			wantPeriod:  true,
+		},
+		{
+			name:        "start date is not a period start, details on the entry",
+			budget:      &UpsertBudget{StartDate: "2025-01-15", CategoryID: 315177, Amount: "500"},
+			wantBody:    map[string]any{"start_date": "2025-01-15", "category_id": float64(315177), "amount": "500"},
+			statusCode:  http.StatusBadRequest,
+			response:    invalidPeriodNestedBody,
 			errContains: "not a valid budget period start",
 			wantPeriod:  true,
 		},
@@ -170,6 +192,15 @@ func TestDeleteBudget(t *testing.T) {
 			startDate:   "2025-01-15",
 			statusCode:  http.StatusBadRequest,
 			response:    invalidPeriodBody,
+			errContains: "not a valid budget period start",
+			wantPeriod:  true,
+		},
+		{
+			name:        "start date is not a period start, details on the entry",
+			categoryID:  315177,
+			startDate:   "2025-01-15",
+			statusCode:  http.StatusBadRequest,
+			response:    invalidPeriodNestedBody,
 			errContains: "not a valid budget period start",
 			wantPeriod:  true,
 		},

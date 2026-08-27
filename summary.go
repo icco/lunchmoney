@@ -302,9 +302,30 @@ func budgetInvalidPeriod(err error) error {
 	}
 
 	period := &BudgetInvalidPeriodError{Err: err}
-	if jsonErr := json.Unmarshal(apiErr.RawBody, period); jsonErr != nil || period.RequestedStartDate == "" {
-		return err
+	if jsonErr := json.Unmarshal(apiErr.RawBody, period); jsonErr == nil && period.RequestedStartDate != "" {
+		return period
 	}
 
-	return period
+	// The API documents this 400 as either the flat shape above or an ordinary
+	// error body with the period details on the entry, so check there too.
+	for _, entry := range apiErr.Errors {
+		requested, _ := entry.Extra["requested_start_date"].(string)
+		if requested == "" {
+			continue
+		}
+
+		previous, _ := entry.Extra["previous_valid_start_date"].(string)
+		next, _ := entry.Extra["next_valid_start_date"].(string)
+
+		return &BudgetInvalidPeriodError{
+			Message:                apiErr.Message,
+			ErrMsg:                 entry.Message,
+			RequestedStartDate:     requested,
+			PreviousValidStartDate: previous,
+			NextValidStartDate:     next,
+			Err:                    err,
+		}
+	}
+
+	return err
 }

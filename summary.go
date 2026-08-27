@@ -205,6 +205,40 @@ type Budget struct {
 	Notes      string  `json:"notes"`
 }
 
+// UnmarshalJSON decodes a budget, accepting an amount given as a JSON number
+// as well as the string the schema documents. The upsert response is the one
+// place the API's own example shows an unquoted amount, and a failed decode
+// there would report an error for a budget that was in fact written.
+func (b *Budget) UnmarshalJSON(data []byte) error {
+	type budget Budget
+
+	aux := struct {
+		Amount json.RawMessage `json:"amount"`
+		*budget
+	}{budget: (*budget)(b)}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if len(aux.Amount) == 0 || string(aux.Amount) == "null" {
+		return nil
+	}
+
+	if err := json.Unmarshal(aux.Amount, &b.Amount); err == nil {
+		return nil
+	}
+
+	var number json.Number
+	if err := json.Unmarshal(aux.Amount, &number); err != nil {
+		return fmt.Errorf("%s is not a valid amount: %w", aux.Amount, err)
+	}
+
+	b.Amount = number.String()
+
+	return nil
+}
+
 // ParsedAmount converts the budgeted amount and currency into a money.Money.
 func (b *Budget) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(b.Amount, b.Currency)

@@ -101,8 +101,8 @@ func (r *PlaidFetchFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 
 	strs := map[string]*string{
-		"start_date": r.StartDate,
-		"end_date":   r.EndDate,
+		queryStartDate: r.StartDate,
+		queryEndDate:   r.EndDate,
 	}
 	for k, v := range strs {
 		if v != nil {

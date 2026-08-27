@@ -115,8 +115,8 @@ type BudgetFilters struct {
 // as GET parameters. Unset optional fields are omitted.
 func (r *BudgetFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{
-		"start_date": r.StartDate,
-		"end_date":   r.EndDate,
+		queryStartDate: r.StartDate,
+		queryEndDate:   r.EndDate,
 	}
 
 	bools := map[string]*bool{

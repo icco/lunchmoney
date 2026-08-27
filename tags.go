@@ -25,8 +25,7 @@ type Tag struct {
 	ArchivedAt      *time.Time `json:"archived_at"`
 }
 
-// GetTags retrieves all tags from the Lunch Money API, ordered alphabetically.
-// It returns a slice of Tag objects containing tag details such as ID, name, and colors.
+// GetTags retrieves all tags, ordered alphabetically.
 func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 	body, err := c.Get(ctx, "/tags", nil)
 	if err != nil {

@@ -83,9 +83,7 @@ type TransactionAttachment struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
-// ParsedAmount converts the transaction's amount and currency into a money.Money object.
-// This provides a convenient way to work with the transaction amount using the go-money library's
-// currency handling capabilities. Returns an error if the amount cannot be parsed.
+// ParsedAmount converts the transaction's amount and currency into a money.Money.
 func (t *Transaction) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(t.Amount, t.Currency)
 }
@@ -171,9 +169,8 @@ func (r *TransactionFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetTransactions retrieves transactions from the Lunch Money API based on the
-// provided filters. It returns the transactions along with a flag saying
-// whether more remain beyond the requested page.
+// GetTransactions retrieves transactions matching filters, plus a flag saying
+// whether more remain beyond this page.
 func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilters) (*TransactionsResponse, error) {
 	options := map[string]string{}
 	if filters != nil {
@@ -202,7 +199,7 @@ func (c *Client) GetTransactions(ctx context.Context, filters *TransactionFilter
 	return resp, nil
 }
 
-// GetTransaction retrieves a single transaction from the Lunch Money API by its ID.
+// GetTransaction retrieves a single transaction by its ID.
 func (c *Client) GetTransaction(ctx context.Context, id int64) (*Transaction, error) {
 	body, err := c.Get(ctx, fmt.Sprintf("/transactions/%d", id), nil)
 	if err != nil {
@@ -217,8 +214,7 @@ func (c *Client) GetTransaction(ctx context.Context, id int64) (*Transaction, er
 	return resp, nil
 }
 
-// InsertTransactionsRequest contains the data needed to create one or more transactions.
-// It includes options for how the transactions should be processed by the Lunch Money system.
+// InsertTransactionsRequest creates one or more transactions.
 type InsertTransactionsRequest struct {
 	Transactions      []InsertTransaction `json:"transactions" validate:"min=1,max=500,dive"`
 	ApplyRules        bool                `json:"apply_rules,omitempty"`
@@ -226,10 +222,8 @@ type InsertTransactionsRequest struct {
 	SkipBalanceUpdate bool                `json:"skip_balance_update,omitempty"`
 }
 
-// InsertTransaction represents a single transaction to be created in the Lunch Money system.
-// Date and Amount are required; everything else is optional.
-//
-// Tags must already exist: v2 takes tag IDs and will not create tags inline.
+// InsertTransaction is a transaction to create. Date and Amount are required.
+// Tags must already exist: v2 takes IDs and will not create tags inline.
 type InsertTransaction struct {
 	Date            string         `json:"date" validate:"datetime=2006-01-02"`
 	Amount          string         `json:"amount" validate:"required"`
@@ -267,8 +261,7 @@ type SkippedDuplicate struct {
 	RequestTransaction      InsertTransaction `json:"request_transaction"`
 }
 
-// InsertTransactions creates new transactions in the Lunch Money API.
-// It takes an InsertTransactionsRequest with transaction details and options.
+// InsertTransactions creates new transactions.
 func (c *Client) InsertTransactions(ctx context.Context, itReq InsertTransactionsRequest) (*InsertTransactionsResponse, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.StructCtx(ctx, itReq); err != nil {
@@ -288,9 +281,8 @@ func (c *Client) InsertTransactions(ctx context.Context, itReq InsertTransaction
 	return resp, nil
 }
 
-// UpdateTransaction contains fields that can be updated for an existing transaction.
-// All fields are optional, and only non-nil fields will be sent in the update request.
-// This provides a flexible way to update specific fields without needing to include unchanged values.
+// UpdateTransaction holds the updatable fields of a transaction. Only non-nil
+// fields are sent.
 type UpdateTransaction struct {
 	Date            *string `json:"date,omitempty" validate:"omitnil,datetime=2006-01-02"`
 	Amount          *string `json:"amount,omitempty"`

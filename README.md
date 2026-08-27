@@ -5,35 +5,36 @@
 
 Golang API wrapper for the [Lunch Money v2 API](https://alpha.lunchmoney.dev/introduction).
 
-To use this API, you need to create an access token on the [developers page](https://my.lunchmoney.app/developers) in the Lunch Money app.
+Create an access token on the [developers page](https://my.lunchmoney.app/developers) to use this.
 
 ## Notes
 
- - This library targets v2 of the API. v1 is no longer supported; see [Migrating](#migrating-from-v1) below.
- - The v2 API is in open alpha and still subject to change. Lunch Money suggests using a test budget while getting started.
- - We currently support read requests plus updating transactions and manual accounts. We'd love a PR to add more write support.
- - We currently only support Go 1.25 and greater.
+ - Targets v2. v1 is not supported.
+ - v2 is in open alpha and still changing. Use a test budget while getting started.
+ - Reads, plus updating transactions and manual accounts. PRs welcome for the rest — see the open issues.
+ - Requires Go 1.25+.
 
 ## Migrating from v1
 
-The v2 API is not backwards compatible with v1, so neither is this release. The changes that touch this library:
+v2 is not backwards compatible, so neither is this release.
 
- - `GetAssets` is now `GetManualAccounts`, and `Asset` is now `ManualAccount`. `type_name` and `subtype_name` became `Type` and `Subtype`, `exclude_transactions` became `ExcludeFromTransactions`, and the `depository` type is now `cash`.
- - `GetRecurringExpenses` is now `GetRecurringItems`, and `RecurringExpense` is now `RecurringItem`. The matching criteria moved into a nested `TransactionCriteria`, overrides into `Overrides`, and match results into `Matches`. Both dates are required when filtering by range.
- - `GetBudgets` is gone. `GetBudgetSummary` reads the replacement `/summary` endpoint and returns a `BudgetSummary` rather than a list of per-category, per-month budgets. `GetBudgetSettings` is new.
- - `GetTransactions` returns a `TransactionsResponse` so that the `has_more` paging flag is visible, rather than a bare slice.
- - `GetTransaction` no longer takes filters, and `UpdateTransaction` returns the updated `Transaction` instead of an `updated` flag. Splitting moved to its own endpoint and is not wrapped here.
- - `GetCategories` takes filters. The API now defaults to the nested format, where a group carries its members in `Children`; pass `CategoryFormatFlattened` for the v1 shape.
- - On `Transaction`: `asset_id` is now `ManualAccountID`, `tags` is now `TagIDs`, `has_children` is `IsSplitParent`, `parent_id` is `SplitParentID`, `is_group` is `IsGroupParent`, and `group_id` is `GroupParentID`. Nullable IDs are pointers so that unset is distinguishable from zero.
- - v2 does not hydrate related records onto a transaction, so the category and account name fields are gone. Look them up with `GetCategory`, `GetManualAccount` or `GetPlaidAccount`.
- - Transaction status `cleared` is now `reviewed` and `uncleared` is `unreviewed`. The `pending` and `recurring` statuses are gone; use the `IsPending` field.
- - `debit_as_negative` is gone everywhere. A positive amount is always a debit and a negative amount always a credit.
- - Inserting transactions takes tag IDs, not tag names, and tags must already exist. A duplicate no longer fails the whole request: accepted rows come back in `Transactions` and rejected ones in `SkippedDuplicates`.
- - On `User`: `user_id`, `user_name` and `user_email` are now `ID`, `Name` and `Email`.
- - `ErrorResponse` matches the v2 error body, and failures now arrive with a 4xx or 5xx status instead of being buried in a 200. A failing call wraps the decoded response, so `errors.As` gets you the status code and the individual problems the API reported.
- - Amounts are sent as strings. v2 also accepts a JSON number, but a single string field avoids the ambiguity of an empty float meaning zero.
- - `ParseCurrency` parses amounts as exact decimals rather than through a float, and scales to the currency's own precision. v2 returns amounts to four decimal places, which the old float path both truncated and misrounded.
+Renames:
 
-## Not yet wrapped
+ - `GetAssets` → `GetManualAccounts`, `Asset` → `ManualAccount`. `type_name`/`subtype_name` → `Type`/`Subtype`, `exclude_transactions` → `ExcludeFromTransactions`, `depository` type → `cash`.
+ - `GetRecurringExpenses` → `GetRecurringItems`, `RecurringExpense` → `RecurringItem`. Criteria, overrides and match results are now nested. Both dates are required when filtering by range.
+ - `GetBudgets` → `GetBudgetSummary` (`/summary`), which returns a `BudgetSummary` rather than per-category, per-month budgets. `GetBudgetSettings` is new.
+ - `GetCategories` takes filters. The API now defaults to nested, where a group carries its members in `Children`; pass `CategoryFormatFlattened` for the v1 shape.
+ - On `Transaction`: `asset_id` → `ManualAccountID`, `tags` → `TagIDs`, `has_children` → `IsSplitParent`, `parent_id` → `SplitParentID`, `is_group` → `IsGroupParent`, `group_id` → `GroupParentID`.
+ - On `User`: `user_id`/`user_name`/`user_email` → `ID`/`Name`/`Email`.
 
-The v2 API is much larger than v1. These endpoints exist but have no wrapper here yet: category and tag writes, transaction deletes, splitting and grouping, attachments, `POST /plaid_accounts/fetch`, budget upsert and delete, and the preview crypto and balance history endpoints.
+Behaviour:
+
+ - `GetTransactions` returns a `TransactionsResponse` so the `has_more` paging flag is visible. `GetTransaction` no longer takes filters, and `UpdateTransaction` returns the updated `Transaction`. Splitting moved to its own endpoint and is not wrapped here.
+ - v2 does not hydrate related records onto a transaction, so the category and account name fields are gone. Use `GetCategory`, `GetManualAccount` or `GetPlaidAccount`.
+ - Status `cleared`/`uncleared` → `reviewed`/`unreviewed`. `pending` and `recurring` are gone; use `IsPending`.
+ - `debit_as_negative` is gone. Positive is always a debit.
+ - Inserting takes tag IDs, and tags must already exist. Duplicates no longer fail the batch: accepted rows come back in `Transactions`, rejected ones in `SkippedDuplicates`.
+ - Nullable IDs are pointers, so unset is distinguishable from zero.
+ - Failures arrive with a 4xx or 5xx status instead of buried in a 200, and wrap an `ErrorResponse` — `errors.As` gets the status code and per-field errors.
+ - `ParseCurrency` parses exact decimals scaled to the currency's precision. v2 returns 4 decimal places, which the old float path truncated and misrounded.
+ - Amounts are sent as strings. v2 also accepts a number, but one string field avoids an empty float meaning zero.

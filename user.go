@@ -17,8 +17,7 @@ type User struct {
 	APIKeyLabel     string `json:"api_key_label"`
 }
 
-// GetUser retrieves information about the currently authenticated user.
-// It returns details such as name, email, ID, and account preferences.
+// GetUser retrieves the currently authenticated user.
 func (c *Client) GetUser(ctx context.Context) (*User, error) {
 	body, err := c.Get(ctx, "/me", nil)
 	if err != nil {

@@ -25,9 +25,8 @@ type CategoriesResponse struct {
 	Categories []*Category `json:"categories"`
 }
 
-// Category represents a single Lunch Money category.
-// Categories are used to organize transactions and budgets.
-// They can be grouped hierarchically and marked as income or excluded from various calculations.
+// Category is a single LM category. Categories can be grouped, and marked as
+// income or excluded from budgets and totals.
 type Category struct {
 	ID                int64       `json:"id"`                  // Unique identifier for the category
 	Name              string      `json:"name"`                // Display name of the category
@@ -73,11 +72,9 @@ func (r *CategoryFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetCategories returns all categories associated with the user's account.
-//
-// Unlike v1, the API defaults to the nested format: category groups come back
-// with their members in Children rather than as separate top level entries.
-// Pass a filter with Format set to CategoryFormatFlattened for the old shape.
+// GetCategories returns all categories. Unlike v1 the API defaults to the
+// nested format, where groups carry their members in Children; pass
+// CategoryFormatFlattened for the old shape.
 func (c *Client) GetCategories(ctx context.Context, filters *CategoryFilters) ([]*Category, error) {
 	options := map[string]string{}
 	if filters != nil {
@@ -107,8 +104,6 @@ func (c *Client) GetCategories(ctx context.Context, filters *CategoryFilters) ([
 }
 
 // GetCategory retrieves a single category by its ID.
-// It returns detailed information about the category including its metadata,
-// group relationships, and various settings.
 func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
 	body, err := c.Get(ctx, fmt.Sprintf("/categories/%d", id), nil)
 	if err != nil {

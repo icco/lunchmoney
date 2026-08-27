@@ -54,9 +54,7 @@ type SummaryOccurrence struct {
 	Notes             string   `json:"notes"`
 }
 
-// ParsedAmount converts the occurrence's budgeted amount and currency into a
-// money.Money object. This provides a convenient way to work with budget
-// figures using the go-money library's currency handling capabilities.
+// ParsedAmount converts the budgeted amount and currency into a money.Money.
 func (o *SummaryOccurrence) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(o.BudgetedAmount, o.BudgetedCurrency)
 }
@@ -95,8 +93,7 @@ type RolloverAdjustment struct {
 	ToBase   float64 `json:"to_base"`
 }
 
-// ParsedAmount converts the adjustment's amount and currency into a
-// money.Money object.
+// ParsedAmount converts the adjustment's amount and currency into a money.Money.
 func (a *RolloverAdjustment) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(a.Amount, a.Currency)
 }
@@ -138,9 +135,8 @@ func (r *BudgetFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetBudgetSummary returns the budget and activity summary for a time period.
-// It replaces v1's GetBudgets, which is gone along with the /budgets endpoint
-// it read from.
+// GetBudgetSummary returns the budget and activity summary for a period. It
+// replaces v1's GetBudgets.
 func (c *Client) GetBudgetSummary(ctx context.Context, filters *BudgetFilters) (*BudgetSummary, error) {
 	if filters == nil {
 		return nil, fmt.Errorf("filters with a start and end date are required")

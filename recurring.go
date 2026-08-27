@@ -79,9 +79,7 @@ type RecurringMatch struct {
 	TransactionID int64  `json:"transaction_id"`
 }
 
-// ParsedAmount converts the recurring item's expected amount and currency into
-// a money.Money object. This provides a convenient way to work with the amount
-// using the go-money library's currency handling capabilities.
+// ParsedAmount converts the item's expected amount and currency into a money.Money.
 func (r *RecurringItem) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(r.TransactionCriteria.Amount, r.TransactionCriteria.Currency)
 }
@@ -115,9 +113,7 @@ func (r *RecurringItemFilters) ToMap() (map[string]string, error) {
 	return ret, nil
 }
 
-// GetRecurringItems retrieves recurring items from the Lunch Money API based on
-// the provided filters. It returns a slice of RecurringItem objects or an error
-// if the request fails.
+// GetRecurringItems retrieves recurring items matching filters.
 func (c *Client) GetRecurringItems(ctx context.Context, filters *RecurringItemFilters) ([]*RecurringItem, error) {
 	options := map[string]string{}
 	if filters != nil {

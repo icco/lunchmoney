@@ -113,27 +113,22 @@ func (e *ErrorResponse) Error() string {
 	return strings.Join(msgs, ": ")
 }
 
-// Get makes a request using the client to the path specified with the
-// key/value pairs specified in options. It returns the body of the response or
-// an error.
+// Get performs a GET request against the given path, with options as query parameters.
 func (c *Client) Get(ctx context.Context, path string, options map[string]string) (io.Reader, error) {
 	return c.do(ctx, http.MethodGet, path, options, nil)
 }
 
-// Put performs an HTTP PUT request to the specified API endpoint with the provided body.
-// It returns the response body as an io.Reader or an error if the request fails.
+// Put performs a PUT request against the given path with body as JSON.
 func (c *Client) Put(ctx context.Context, path string, body any) (io.Reader, error) {
 	return c.do(ctx, http.MethodPut, path, nil, body)
 }
 
-// Post performs an HTTP POST request to the specified API endpoint with the provided body.
-// It returns the response body as an io.Reader or an error if the request fails.
+// Post performs a POST request against the given path with body as JSON.
 func (c *Client) Post(ctx context.Context, path string, body any) (io.Reader, error) {
 	return c.do(ctx, http.MethodPost, path, nil, body)
 }
 
-// Delete performs an HTTP DELETE request against the specified API endpoint.
-// v2 answers a successful delete with 204 and an empty body.
+// Delete performs a DELETE request against the given path. v2 answers with 204 and no body.
 func (c *Client) Delete(ctx context.Context, path string, options map[string]string) (io.Reader, error) {
 	return c.do(ctx, http.MethodDelete, path, options, nil)
 }

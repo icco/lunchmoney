@@ -41,16 +41,12 @@ type ManualAccount struct {
 	UpdatedAt               time.Time      `json:"updated_at"`
 }
 
-// ParsedAmount converts the account's balance and currency into a money.Money object.
-// This provides a convenient way to work with the account's value using the go-money library's
-// currency handling capabilities. Returns an error if the balance cannot be parsed.
+// ParsedAmount converts the account's balance and currency into a money.Money.
 func (a *ManualAccount) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(a.Balance, a.Currency)
 }
 
-// GetManualAccounts retrieves all manual accounts from the Lunch Money API.
-// It returns a slice of ManualAccount objects containing information about each
-// account, including balance, institution, and status details.
+// GetManualAccounts retrieves all manual accounts.
 func (c *Client) GetManualAccounts(ctx context.Context) ([]*ManualAccount, error) {
 	body, err := c.Get(ctx, "/manual_accounts", nil)
 	if err != nil {
@@ -98,9 +94,7 @@ type UpdateManualAccount struct {
 	ExcludeFromTransactions *bool           `json:"exclude_from_transactions,omitempty"`
 }
 
-// UpdateManualAccount modifies an existing manual account with the specified ID
-// using the provided fields. It returns the updated account or an error if the
-// update fails. Only fields that are non-nil are sent.
+// UpdateManualAccount updates the account with the given ID and returns it.
 func (c *Client) UpdateManualAccount(ctx context.Context, id int64, account *UpdateManualAccount) (*ManualAccount, error) {
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	if err := validate.StructCtx(ctx, account); err != nil {

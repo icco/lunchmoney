@@ -4,26 +4,30 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/go-playground/validator/v10"
+	"time"
 )
 
 // TagsResponse is the response from getting all tags.
-type TagsResponse []*Tag
+type TagsResponse struct {
+	Tags []*Tag `json:"tags"`
+}
 
 // Tag is a single LM tag.
 type Tag struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID              int64      `json:"id"`
+	Name            string     `json:"name"`
+	Description     string     `json:"description"`
+	TextColor       string     `json:"text_color"`
+	BackgroundColor string     `json:"background_color"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	Archived        bool       `json:"archived"`
+	ArchivedAt      *time.Time `json:"archived_at"`
 }
 
-// GetTags retrieves all tags from the Lunch Money API.
-// It returns a slice of Tag objects containing tag details such as ID, name, and description.
-// Returns an error if the request fails or if any tag fails validation.
+// GetTags retrieves all tags, ordered alphabetically.
 func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
-	validate := validator.New()
-	body, err := c.Get(ctx, "/v1/tags", nil)
+	body, err := c.Get(ctx, "/tags", nil)
 	if err != nil {
 		return nil, fmt.Errorf("get tags: %w", err)
 	}
@@ -33,13 +37,20 @@ func (c *Client) GetTags(ctx context.Context) ([]*Tag, error) {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	ret := []*Tag(*resp)
+	return resp.Tags, nil
+}
 
-	for _, t := range ret {
-		if err := validate.Struct(t); err != nil {
-			return nil, err
-		}
+// GetTag retrieves a single tag by its ID.
+func (c *Client) GetTag(ctx context.Context, id int64) (*Tag, error) {
+	body, err := c.Get(ctx, fmt.Sprintf("/tags/%d", id), nil)
+	if err != nil {
+		return nil, fmt.Errorf("get tag %d: %w", id, err)
 	}
 
-	return ret, nil
+	resp := &Tag{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
 }

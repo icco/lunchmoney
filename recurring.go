@@ -11,93 +11,163 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// RecurringExpensesResponse is the data struct we get back from a get request.
-type RecurringExpensesResponse struct {
-	RecurringExpenses []*RecurringExpense `json:"recurring_expenses"`
+// RecurringItemsResponse is the data struct we get back from a get request.
+type RecurringItemsResponse struct {
+	RecurringItems []*RecurringItem `json:"recurring_items"`
 }
 
-// RecurringExpense is like a transaction, but one that's scheduled to happen.
-type RecurringExpense struct {
-	ID             int64     `json:"id"`
-	StartDate      string    `json:"start_date" validate:"datetime=2006-01-02"`
-	EndDate        string    `json:"end_date" validate:"datetime=2006-01-02"`
-	Cadence        string    `json:"cadence"`
-	Payee          string    `json:"payee"`
-	Amount         string    `json:"amount"`
-	Currency       string    `json:"currency"`
-	CreatedAt      time.Time `json:"created_at"`
-	Description    string    `json:"description"`
-	BillingDate    string    `json:"billing_date"`
-	Type           string    `json:"type"`
-	OriginalName   string    `json:"original_name"`
-	Source         string    `json:"source"`
-	PlaidAccountID int64     `json:"plaid_account_id"`
-	AssetID        int64     `json:"asset_id"`
-	TransactionID  int64     `json:"transaction_id"`
+// RecurringItem is a transaction that is scheduled to happen repeatedly. In v1
+// of the API these were called recurring expenses, and the criteria that
+// identify a matching transaction were flat fields on this object rather than
+// the nested TransactionCriteria.
+type RecurringItem struct {
+	ID          int64  `json:"id"`
+	Description string `json:"description"`
+	// Status is either "suggested" or "reviewed". Only reviewed items are
+	// applied to matching transactions.
+	Status              string             `json:"status"`
+	TransactionCriteria RecurringCriteria  `json:"transaction_criteria"`
+	Overrides           RecurringOverrides `json:"overrides"`
+	Matches             *RecurringMatches  `json:"matches"`
+	CreatedBy           int64              `json:"created_by"`
+	CreatedAt           time.Time          `json:"created_at"`
+	UpdatedAt           time.Time          `json:"updated_at"`
+	// Source is one of manual, transaction or system, and is empty for some
+	// older recurring items.
+	Source string `json:"source"`
 }
 
-// ParsedAmount converts the recurring expense's amount and currency into a money.Money object.
-// This provides a convenient way to work with the expense amount using the go-money library's
-// currency handling capabilities. Returns an error if the amount cannot be parsed.
-func (r *RecurringExpense) ParsedAmount() (*money.Money, error) {
-	return ParseCurrency(r.Amount, r.Currency)
+// RecurringCriteria is the set of properties used to identify transactions that
+// match a recurring item.
+type RecurringCriteria struct {
+	StartDate string `json:"start_date"`
+	EndDate   string `json:"end_date"`
+	// Granularity is one of day, week, month or year, and combines with
+	// Quantity and AnchorDate to describe the cadence.
+	Granularity     string  `json:"granularity"`
+	Quantity        int64   `json:"quantity"`
+	AnchorDate      string  `json:"anchor_date"`
+	Payee           string  `json:"payee"`
+	Amount          string  `json:"amount"`
+	ToBase          float64 `json:"to_base"`
+	Currency        string  `json:"currency"`
+	PlaidAccountID  *int64  `json:"plaid_account_id"`
+	ManualAccountID *int64  `json:"manual_account_id"`
 }
 
-// RecurringExpenseFilters are options to pass to the request.
-type RecurringExpenseFilters struct {
-	StartDate       string `json:"start_date" validate:"omitempty,datetime=2006-01-02"`
-	DebitAsNegative bool   `json:"debit_as_negative"`
+// RecurringOverrides are the values applied to transactions that match a
+// recurring item.
+type RecurringOverrides struct {
+	Payee      string `json:"payee"`
+	Notes      string `json:"notes"`
+	CategoryID *int64 `json:"category_id"`
 }
 
-// ToMap converts the recurring expense filters to a string map to be sent with
-// the request as GET parameters. An empty StartDate is omitted.
-//
-// The map is built field by field rather than marshaled through JSON: a
-// map[string]string cannot hold the JSON bool that DebitAsNegative encodes to,
-// so the round trip failed for every input, including the zero value.
-func (r *RecurringExpenseFilters) ToMap() (map[string]string, error) {
+// RecurringMatches describes the expected, found and missing transactions for
+// the requested date range. It is nil for items with a "suggested" status.
+type RecurringMatches struct {
+	RequestStartDate        string           `json:"request_start_date"`
+	RequestEndDate          string           `json:"request_end_date"`
+	ExpectedOccurrenceDates []string         `json:"expected_occurrence_dates"`
+	FoundTransactions       []RecurringMatch `json:"found_transactions"`
+	MissingTransactionDates []string         `json:"missing_transaction_dates"`
+}
+
+// RecurringMatch is a single transaction that matched a recurring item.
+type RecurringMatch struct {
+	Date          string `json:"date"`
+	TransactionID int64  `json:"transaction_id"`
+}
+
+// ParsedAmount converts the item's expected amount and currency into a money.Money.
+func (r *RecurringItem) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(r.TransactionCriteria.Amount, r.TransactionCriteria.Currency)
+}
+
+// RecurringItemFilters are options to pass to the request. StartDate and
+// EndDate must be given together; v2 no longer accepts a start date alone, and
+// the debit_as_negative option is gone.
+type RecurringItemFilters struct {
+	StartDate        string `validate:"required_with=EndDate,omitempty,datetime=2006-01-02"`
+	EndDate          string `validate:"required_with=StartDate,omitempty,datetime=2006-01-02"`
+	IncludeSuggested *bool
+}
+
+// ToMap converts the recurring item filters to a string map to be sent with
+// the request as GET parameters. Unset fields are omitted.
+func (r *RecurringItemFilters) ToMap() (map[string]string, error) {
 	ret := map[string]string{}
 
 	if r.StartDate != "" {
 		ret["start_date"] = r.StartDate
 	}
 
-	ret["debit_as_negative"] = strconv.FormatBool(r.DebitAsNegative)
+	if r.EndDate != "" {
+		ret["end_date"] = r.EndDate
+	}
+
+	if r.IncludeSuggested != nil {
+		ret["include_suggested"] = strconv.FormatBool(*r.IncludeSuggested)
+	}
 
 	return ret, nil
 }
 
-// GetRecurringExpenses retrieves all recurring expenses from the Lunch Money API based on the provided filters.
-// It returns a slice of RecurringExpense objects or an error if the request fails.
-// The filters parameter can be used to specify date ranges and other criteria.
-func (c *Client) GetRecurringExpenses(ctx context.Context, filters *RecurringExpenseFilters) ([]*RecurringExpense, error) {
-	validate := validator.New()
+// GetRecurringItems retrieves recurring items matching filters.
+func (c *Client) GetRecurringItems(ctx context.Context, filters *RecurringItemFilters) ([]*RecurringItem, error) {
 	options := map[string]string{}
 	if filters != nil {
-		if err := validate.Struct(filters); err != nil {
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.StructCtx(ctx, filters); err != nil {
 			return nil, err
 		}
 
 		maps, err := filters.ToMap()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("convert filters to map: %w", err)
 		}
 		options = maps
 	}
 
-	body, err := c.Get(ctx, "/v1/recurring_expenses", options)
+	body, err := c.Get(ctx, "/recurring_items", options)
 	if err != nil {
-		return nil, fmt.Errorf("get recurring expenses: %w", err)
+		return nil, fmt.Errorf("get recurring items: %w", err)
 	}
 
-	resp := &RecurringExpensesResponse{}
+	resp := &RecurringItemsResponse{}
 	if err := json.NewDecoder(body).Decode(resp); err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	if err := validate.Struct(resp); err != nil {
-		return nil, err
+	return resp.RecurringItems, nil
+}
+
+// GetRecurringItem retrieves a single recurring item by its ID. The filters
+// control the date range used to populate the item's Matches.
+func (c *Client) GetRecurringItem(ctx context.Context, id int64, filters *RecurringItemFilters) (*RecurringItem, error) {
+	options := map[string]string{}
+	if filters != nil {
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.StructCtx(ctx, filters); err != nil {
+			return nil, err
+		}
+
+		maps, err := filters.ToMap()
+		if err != nil {
+			return nil, fmt.Errorf("convert filters to map: %w", err)
+		}
+		options = maps
 	}
 
-	return resp.RecurringExpenses, nil
+	body, err := c.Get(ctx, fmt.Sprintf("/recurring_items/%d", id), options)
+	if err != nil {
+		return nil, fmt.Errorf("get recurring item %d: %w", id, err)
+	}
+
+	resp := &RecurringItem{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
 }

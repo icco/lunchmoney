@@ -1,117 +1,118 @@
 package lunchmoney
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 )
 
+// Category format options accepted by GetCategories.
+const (
+	// CategoryFormatNested returns category groups with their members in a
+	// Children slice. This is the API default.
+	CategoryFormatNested = "nested"
+
+	// CategoryFormatFlattened returns every category at the top level, which
+	// is what v1 of the API did.
+	CategoryFormatFlattened = "flattened"
+)
+
 // CategoriesResponse is the response we get from requesting categories.
-// It contains a list of categories and an optional error message.
 type CategoriesResponse struct {
 	Categories []*Category `json:"categories"`
-	Error      string      `json:"error"`
 }
 
-// Category represents a single Lunch Money category.
-// Categories are used to organize transactions and budgets.
-// They can be grouped hierarchically and marked as income or excluded from various calculations.
+// Category is a single LM category. Categories can be grouped, and marked as
+// income or excluded from budgets and totals.
 type Category struct {
-	ID                int64     `json:"id"`                  // Unique identifier for the category
-	Name              string    `json:"name"`                // Display name of the category
-	Description       string    `json:"description"`         // Optional description of the category
-	IsIncome          bool      `json:"is_income"`           // Whether this category represents income
-	ExcludeFromBudget bool      `json:"exclude_from_budget"` // Whether to exclude from budget calculations
-	ExcludeFromTotals bool      `json:"exclude_from_totals"` // Whether to exclude from total calculations
-	UpdatedAt         time.Time `json:"updated_at"`          // Last modification timestamp
-	CreatedAt         time.Time `json:"created_at"`          // Creation timestamp
-	IsGroup           bool      `json:"is_group"`            // Whether this category is a group
-	GroupID           int64     `json:"group_id"`            // ID of the parent group, if any
+	ID                int64       `json:"id"`                  // Unique identifier for the category
+	Name              string      `json:"name"`                // Display name of the category
+	Description       string      `json:"description"`         // Optional description of the category
+	IsIncome          bool        `json:"is_income"`           // Whether this category represents income
+	ExcludeFromBudget bool        `json:"exclude_from_budget"` // Whether to exclude from budget calculations
+	ExcludeFromTotals bool        `json:"exclude_from_totals"` // Whether to exclude from total calculations
+	UpdatedAt         time.Time   `json:"updated_at"`          // Last modification timestamp
+	CreatedAt         time.Time   `json:"created_at"`          // Creation timestamp
+	IsGroup           bool        `json:"is_group"`            // Whether this category is a group
+	GroupID           *int64      `json:"group_id"`            // ID of the parent group, or nil
+	Children          []*Category `json:"children,omitempty"`  // Members of this group, when requesting the nested format
+	Archived          bool        `json:"archived"`            // Whether the category is hidden in the app
+	ArchivedAt        *time.Time  `json:"archived_at"`         // When the category was last archived, or nil
+	Order             *int64      `json:"order"`               // Position on the categories page, or nil for alphabetical
+	Collapsed         bool        `json:"collapsed"`           // Whether the group appears collapsed in the app
 }
 
-// GetCategories returns a flattened list of all categories in alphabetical
-// order associated with the user's account. This includes both regular categories
-// and category groups. The returned categories include metadata such as creation time,
-// group relationships, and budget exclusion settings.
-//
-// The context can be used to control the request lifecycle.
-// Returns an error if the API request fails or if the response cannot be validated.
-func (c *Client) GetCategories(ctx context.Context) ([]*Category, error) {
-	validate := validator.New()
+// CategoryFilters are options to pass into the request for categories.
+type CategoryFilters struct {
+	// Format is either CategoryFormatNested or CategoryFormatFlattened. An
+	// empty value uses the API default, which is nested.
+	Format string `validate:"omitempty,oneof=nested flattened"`
+
+	// IsGroup, when set, restricts the response to category groups or to
+	// categories that are not groups.
+	IsGroup *bool
+}
+
+// ToMap converts the category filters to a string map to be sent with the
+// request as GET parameters. Unset fields are omitted.
+func (r *CategoryFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{}
+
+	if r.Format != "" {
+		ret["format"] = r.Format
+	}
+
+	if r.IsGroup != nil {
+		ret["is_group"] = fmt.Sprintf("%t", *r.IsGroup)
+	}
+
+	return ret, nil
+}
+
+// GetCategories returns all categories. Unlike v1 the API defaults to the
+// nested format, where groups carry their members in Children; pass
+// CategoryFormatFlattened for the old shape.
+func (c *Client) GetCategories(ctx context.Context, filters *CategoryFilters) ([]*Category, error) {
 	options := map[string]string{}
-	body, err := c.Get(ctx, "/v1/categories", options)
+	if filters != nil {
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err := validate.StructCtx(ctx, filters); err != nil {
+			return nil, err
+		}
+
+		maps, err := filters.ToMap()
+		if err != nil {
+			return nil, fmt.Errorf("convert filters to map: %w", err)
+		}
+		options = maps
+	}
+
+	body, err := c.Get(ctx, "/categories", options)
 	if err != nil {
 		return nil, fmt.Errorf("get categories: %w", err)
 	}
 
-	var resp *CategoriesResponse
-	var bodyCopy bytes.Buffer
-	tee := io.TeeReader(body, &bodyCopy)
-	if err := json.NewDecoder(tee).Decode(&resp); err != nil {
+	resp := &CategoriesResponse{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
-	for _, b := range resp.Categories {
-		if err := validate.StructCtx(ctx, b); err != nil {
-			var validationErrors validator.ValidationErrors
-			var invalidValidationError *validator.InvalidValidationError
-
-			switch {
-			case errors.As(err, &validationErrors):
-				return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
-			case errors.As(err, &invalidValidationError):
-				return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
-			default:
-				return nil, fmt.Errorf("validating response (%T): %w", err, err)
-			}
-		}
-	}
 	return resp.Categories, nil
 }
 
 // GetCategory retrieves a single category by its ID.
-// It returns detailed information about the category including its metadata,
-// group relationships, and various settings.
-//
-// Parameters:
-//   - ctx: Context for controlling the request lifecycle
-//   - id: The unique identifier of the category to retrieve
-//
-// Returns the category details or an error if the request fails or
-// the response cannot be validated.
 func (c *Client) GetCategory(ctx context.Context, id int64) (*Category, error) {
-	options := map[string]string{}
-	body, err := c.Get(ctx, fmt.Sprintf("/v1/categories/%d", id), options)
+	body, err := c.Get(ctx, fmt.Sprintf("/categories/%d", id), nil)
 	if err != nil {
-		return nil, fmt.Errorf("error getting category: %w", err)
+		return nil, fmt.Errorf("get category %d: %w", id, err)
 	}
 
-	var resp *Category
-	var bodyCopy bytes.Buffer
-	tee := io.TeeReader(body, &bodyCopy)
-	if err := json.NewDecoder(tee).Decode(&resp); err != nil {
-		return nil, fmt.Errorf("error getting category: %w", err)
-	}
-
-	validate := validator.New()
-	if err := validate.StructCtx(ctx, resp); err != nil {
-		var validationErrors validator.ValidationErrors
-		var invalidValidationError *validator.InvalidValidationError
-
-		switch {
-		case errors.As(err, &validationErrors):
-			return nil, fmt.Errorf("validating response: %s", validationErrors.Error())
-		case errors.As(err, &invalidValidationError):
-			return nil, fmt.Errorf("validating response (InvalidValidation): %s", invalidValidationError.Error())
-		default:
-			return nil, fmt.Errorf("validating response (%T): %w", err, err)
-		}
+	resp := &Category{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
 	}
 
 	return resp, nil

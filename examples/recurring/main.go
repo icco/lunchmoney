@@ -12,7 +12,7 @@ func main() {
 	ctx := context.Background()
 	token := os.Getenv("LUNCHMONEY_TOKEN")
 	client, _ := lunchmoney.NewClient(token)
-	ts, err := client.GetRecurringExpenses(ctx, nil)
+	ts, err := client.GetRecurringItems(ctx, nil)
 	if err != nil {
 		log.Panicf("err: %+v", err)
 	}

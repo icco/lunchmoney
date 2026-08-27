@@ -1,0 +1,194 @@
+package lunchmoney
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	"github.com/Rhymond/go-money"
+	"github.com/go-playground/validator/v10"
+)
+
+// BudgetSummary is the budget and activity rollup for a date range. It replaces
+// the per-category, per-month Budget list v1 returned from /budgets.
+type BudgetSummary struct {
+	// Aligned reports whether the requested range lines up with the user's
+	// configured budget periods. When false, the numbers cover a range that
+	// spans or splits budget periods.
+	Aligned      bool               `json:"aligned"`
+	Categories   []*SummaryCategory `json:"categories"`
+	Totals       *SummaryTotals     `json:"totals,omitempty"`
+	RolloverPool *RolloverPool      `json:"rollover_pool,omitempty"`
+}
+
+// SummaryCategory is one category's budget and activity within the range.
+type SummaryCategory struct {
+	CategoryID  int64                `json:"category_id"`
+	Totals      SummaryCategoryTotal `json:"totals"`
+	Occurrences []SummaryOccurrence  `json:"occurrences,omitempty"`
+}
+
+// SummaryCategoryTotal holds a category's amounts across the whole range, in
+// the user's primary currency.
+type SummaryCategoryTotal struct {
+	OtherActivity      float64  `json:"other_activity"`
+	RecurringActivity  float64  `json:"recurring_activity"`
+	Budgeted           *float64 `json:"budgeted"`
+	Available          *float64 `json:"available"`
+	RecurringRemaining float64  `json:"recurring_remaining"`
+	RecurringExpected  float64  `json:"recurring_expected"`
+}
+
+// SummaryOccurrence is a category's amounts for a single budget period within
+// the requested range.
+type SummaryOccurrence struct {
+	InRange           bool     `json:"in_range"`
+	StartDate         string   `json:"start_date"`
+	EndDate           string   `json:"end_date"`
+	OtherActivity     float64  `json:"other_activity"`
+	RecurringActivity float64  `json:"recurring_activity"`
+	Budgeted          *float64 `json:"budgeted"`
+	BudgetedAmount    string   `json:"budgeted_amount"`
+	BudgetedCurrency  string   `json:"budgeted_currency"`
+	Notes             string   `json:"notes"`
+}
+
+// ParsedAmount converts the budgeted amount and currency into a money.Money.
+func (o *SummaryOccurrence) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(o.BudgetedAmount, o.BudgetedCurrency)
+}
+
+// SummaryTotals splits the range's activity into money coming in and going out.
+// It is only present when the IncludeTotals filter is set.
+type SummaryTotals struct {
+	Inflow  SummaryTotalsBreakdown `json:"inflow"`
+	Outflow SummaryTotalsBreakdown `json:"outflow"`
+}
+
+// SummaryTotalsBreakdown is one direction's activity across the range.
+type SummaryTotalsBreakdown struct {
+	OtherActivity          float64 `json:"other_activity"`
+	RecurringActivity      float64 `json:"recurring_activity"`
+	RecurringRemaining     float64 `json:"recurring_remaining"`
+	RecurringExpected      float64 `json:"recurring_expected"`
+	Uncategorized          float64 `json:"uncategorized"`
+	UncategorizedCount     int64   `json:"uncategorized_count"`
+	UncategorizedRecurring float64 `json:"uncategorized_recurring"`
+}
+
+// RolloverPool is the left-to-budget pool and the adjustments made to it. It is
+// only present when the IncludeRolloverPool filter is set.
+type RolloverPool struct {
+	BudgetedToBase float64              `json:"budgeted_to_base"`
+	AllAdjustments []RolloverAdjustment `json:"all_adjustments"`
+}
+
+// RolloverAdjustment is a single change to the rollover pool.
+type RolloverAdjustment struct {
+	InRange  bool    `json:"in_range"`
+	Date     string  `json:"date"`
+	Amount   string  `json:"amount"`
+	Currency string  `json:"currency"`
+	ToBase   float64 `json:"to_base"`
+}
+
+// ParsedAmount converts the adjustment's amount and currency into a money.Money.
+func (a *RolloverAdjustment) ParsedAmount() (*money.Money, error) {
+	return ParseCurrency(a.Amount, a.Currency)
+}
+
+// BudgetFilters are options to pass into the request for a budget summary.
+// Both dates are required.
+type BudgetFilters struct {
+	StartDate string `validate:"datetime=2006-01-02,required"`
+	EndDate   string `validate:"datetime=2006-01-02,required"`
+
+	IncludeExcludeFromBudgets *bool
+	IncludeOccurrences        *bool
+	IncludePastBudgetDates    *bool
+	IncludeTotals             *bool
+	IncludeRolloverPool       *bool
+}
+
+// ToMap converts the budget filters to a string map to be sent with the request
+// as GET parameters. Unset optional fields are omitted.
+func (r *BudgetFilters) ToMap() (map[string]string, error) {
+	ret := map[string]string{
+		"start_date": r.StartDate,
+		"end_date":   r.EndDate,
+	}
+
+	bools := map[string]*bool{
+		"include_exclude_from_budgets": r.IncludeExcludeFromBudgets,
+		"include_occurrences":          r.IncludeOccurrences,
+		"include_past_budget_dates":    r.IncludePastBudgetDates,
+		"include_totals":               r.IncludeTotals,
+		"include_rollover_pool":        r.IncludeRolloverPool,
+	}
+	for k, v := range bools {
+		if v != nil {
+			ret[k] = strconv.FormatBool(*v)
+		}
+	}
+
+	return ret, nil
+}
+
+// GetBudgetSummary returns the budget and activity summary for a period. It
+// replaces v1's GetBudgets.
+func (c *Client) GetBudgetSummary(ctx context.Context, filters *BudgetFilters) (*BudgetSummary, error) {
+	if filters == nil {
+		return nil, fmt.Errorf("filters with a start and end date are required")
+	}
+
+	validate := validator.New(validator.WithRequiredStructEnabled())
+	if err := validate.StructCtx(ctx, filters); err != nil {
+		return nil, err
+	}
+
+	options, err := filters.ToMap()
+	if err != nil {
+		return nil, fmt.Errorf("convert filters to map: %w", err)
+	}
+
+	body, err := c.Get(ctx, "/summary", options)
+	if err != nil {
+		return nil, fmt.Errorf("get budget summary: %w", err)
+	}
+
+	resp := &BudgetSummary{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}
+
+// BudgetSettings describes how the user's budget periods are configured.
+type BudgetSettings struct {
+	// PeriodGranularity is one of day, week, month, year or "twice a month".
+	PeriodGranularity string  `json:"budget_period_granularity"`
+	PeriodQuantity    float64 `json:"budget_period_quantity"`
+	PeriodAnchorDate  string  `json:"budget_period_anchor_date"`
+	HideNoActivity    bool    `json:"budget_hide_no_activity"`
+	UseLastDayOfMonth bool    `json:"budget_use_last_day_of_month"`
+	// IncomeOption is one of max, budgeted or activity.
+	IncomeOption         string `json:"budget_income_option"`
+	RolloverLeftToBudget bool   `json:"budget_rollover_left_to_budget"`
+}
+
+// GetBudgetSettings returns the user's budget period configuration.
+func (c *Client) GetBudgetSettings(ctx context.Context) (*BudgetSettings, error) {
+	body, err := c.Get(ctx, "/budgets/settings", nil)
+	if err != nil {
+		return nil, fmt.Errorf("get budget settings: %w", err)
+	}
+
+	resp := &BudgetSettings{}
+	if err := json.NewDecoder(body).Decode(resp); err != nil {
+		return nil, fmt.Errorf("decode response: %w", err)
+	}
+
+	return resp, nil
+}

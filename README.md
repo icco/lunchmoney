@@ -37,7 +37,7 @@ Runnable examples are in [examples/](examples). Full API docs are on [GoDoc](htt
 
 ## Notes
 
-Covers the stable v2 surface: users, categories, tags, transactions (with splits, groups, deletes and attachments), manual accounts, Plaid accounts, recurring items and budgets. The preview crypto and balance history endpoints are not wrapped ([#34](https://github.com/icco/lunchmoney/issues/34)).
+Covers the stable v2 surface: users, categories, tags, transactions (with splits, groups, deletes and attachments), manual and synced crypto accounts, balance history, manual accounts, Plaid accounts, recurring items and budgets.
 
 Amounts are strings; `ParseCurrency` turns one into a `*money.Money` scaled to the currency's minor units. Nullable IDs are pointers. Errors wrap an `*ErrorResponse` carrying the status code, reachable with `errors.As`.
 

@@ -82,4 +82,4 @@ Splitting moved out of `UpdateTransaction` to `SplitTransaction`, and unsplittin
 
 Category, tag and manual account writes; transaction deletes, splits, groups and attachments; budget upsert and delete; `TriggerPlaidFetch`; and single-item getters for tags, plaid accounts, manual accounts and recurring items.
 
-The preview crypto and balance history endpoints are not wrapped — see [#34](https://github.com/icco/lunchmoney/issues/34).
+Crypto and balance history endpoints are now wrapped, including manual/synced crypto and per-account/per-symbol balance history variants.

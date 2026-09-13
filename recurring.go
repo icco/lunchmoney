@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Rhymond/go-money"
@@ -80,6 +82,81 @@ type RecurringMatch struct {
 // ParsedAmount converts the item's expected amount and currency into a money.Money.
 func (r *RecurringItem) ParsedAmount() (*money.Money, error) {
 	return ParseCurrency(r.TransactionCriteria.Amount, r.TransactionCriteria.Currency)
+}
+
+// MonthlyFactor converts the item's recurrence granularity and quantity into a per-month multiplier.
+// Returns 0, false if the cadence is unrecognized or invalid (e.g. quantity <= 0).
+func (c *RecurringCriteria) MonthlyFactor() (float64, bool) {
+	if c.Quantity <= 0 {
+		return 0, false
+	}
+
+	q := float64(c.Quantity)
+	switch strings.ToLower(strings.TrimSpace(c.Granularity)) {
+	case "day":
+		return (365.0 / q) / 12.0, true
+	case "week":
+		return (52.0 / q) / 12.0, true
+	case "month":
+		return 1.0 / q, true
+	case "year":
+		return 1.0 / (12.0 * q), true
+	default:
+		return 0, false
+	}
+}
+
+// Cadence returns a human-readable description of the recurrence schedule, e.g. "monthly", "weekly", "every 2 weeks".
+func (c *RecurringCriteria) Cadence() string {
+	q := c.Quantity
+	switch strings.ToLower(strings.TrimSpace(c.Granularity)) {
+	case "day":
+		if q == 1 {
+			return "daily"
+		}
+		return fmt.Sprintf("every %d days", q)
+	case "week":
+		if q == 1 {
+			return "weekly"
+		}
+		if q == 2 {
+			return "every 2 weeks"
+		}
+		return fmt.Sprintf("every %d weeks", q)
+	case "month":
+		if q == 1 {
+			return "monthly"
+		}
+		if q == 3 {
+			return "every 3 months"
+		}
+		if q == 6 {
+			return "twice a year"
+		}
+		return fmt.Sprintf("every %d months", q)
+	case "year":
+		if q == 1 {
+			return "yearly"
+		}
+		return fmt.Sprintf("every %d years", q)
+	default:
+		return c.Granularity
+	}
+}
+
+// MonthlyAmount calculates the effective monthly obligation for this recurring item.
+func (r *RecurringItem) MonthlyAmount() (float64, error) {
+	factor, ok := r.TransactionCriteria.MonthlyFactor()
+	if !ok {
+		return 0, fmt.Errorf("unknown recurrence granularity %q or invalid quantity %d", r.TransactionCriteria.Granularity, r.TransactionCriteria.Quantity)
+	}
+
+	amt, err := ParseAmount(r.TransactionCriteria.Amount)
+	if err != nil {
+		return 0, fmt.Errorf("parse amount: %w", err)
+	}
+
+	return math.Round(amt*factor*100) / 100, nil
 }
 
 // RecurringItemFilters are options for the request. StartDate and EndDate must

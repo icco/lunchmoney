@@ -176,3 +176,32 @@ func TestParseCurrency(t *testing.T) {
 		})
 	}
 }
+
+func TestParseAmount(t *testing.T) {
+	tests := []struct {
+		name    string
+		amount  string
+		want    float64
+		wantErr bool
+	}{
+		{name: "four decimals", amount: "1250.8400", want: 1250.84},
+		{name: "two decimals", amount: "42.50", want: 42.5},
+		{name: "negative", amount: "-100.25", want: -100.25},
+		{name: "integer", amount: "50", want: 50.0},
+		{name: "rounding", amount: "10.005", want: 10.01},
+		{name: "empty", amount: "", wantErr: true},
+		{name: "invalid", amount: "invalid", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseAmount(tt.amount)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

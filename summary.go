@@ -24,6 +24,33 @@ type BudgetSummary struct {
 	RolloverPool *RolloverPool      `json:"rollover_pool,omitempty"`
 }
 
+// CategoryByID finds a category by its ID within the budget summary, or nil if not found.
+func (s *BudgetSummary) CategoryByID(id int64) *SummaryCategory {
+	if s == nil {
+		return nil
+	}
+	for _, c := range s.Categories {
+		if c != nil && c.CategoryID == id {
+			return c
+		}
+	}
+	return nil
+}
+
+// CategoryMap returns a map of category ID to SummaryCategory for convenient lookup.
+func (s *BudgetSummary) CategoryMap() map[int64]*SummaryCategory {
+	if s == nil {
+		return nil
+	}
+	m := make(map[int64]*SummaryCategory, len(s.Categories))
+	for _, c := range s.Categories {
+		if c != nil {
+			m[c.CategoryID] = c
+		}
+	}
+	return m
+}
+
 // SummaryCategory is one category's budget and activity within the range.
 type SummaryCategory struct {
 	CategoryID  int64                `json:"category_id"`

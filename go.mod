@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/Rhymond/go-money v1.0.15
-	github.com/go-playground/validator/v10 v10.30.3
+	github.com/go-playground/validator/v10 v10.30.4
 	github.com/stretchr/testify v1.12.1
 )
 

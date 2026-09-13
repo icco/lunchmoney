@@ -306,3 +306,19 @@ func parseDecimal(amount string, fraction int) (int64, error) {
 
 	return units, nil
 }
+
+// ParseAmount converts an amount string (e.g. "1250.8400", "-45.50") into a float64
+// rounded to two decimal places.
+func ParseAmount(amount string) (float64, error) {
+	s := strings.TrimSpace(amount)
+	if s == "" {
+		return 0, fmt.Errorf("%q is not a valid amount", amount)
+	}
+
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%q is not a valid amount: %w", amount, err)
+	}
+
+	return math.Round(f*100) / 100, nil
+}

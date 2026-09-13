@@ -272,3 +272,27 @@ func assertInvalidPeriod(t *testing.T, err error, want bool) {
 	require.True(t, errors.As(err, &apiErr))
 	assert.Equal(t, http.StatusBadRequest, apiErr.StatusCode)
 }
+
+func TestBudgetSummary_CategoryLookups(t *testing.T) {
+	s := &BudgetSummary{
+		Categories: []*SummaryCategory{
+			{CategoryID: 10, Totals: SummaryCategoryTotal{OtherActivity: 100}},
+			{CategoryID: 20, Totals: SummaryCategoryTotal{OtherActivity: 200}},
+		},
+	}
+
+	assert.NotNil(t, s.CategoryByID(10))
+	assert.Equal(t, float64(100), s.CategoryByID(10).Totals.OtherActivity)
+	assert.NotNil(t, s.CategoryByID(20))
+	assert.Equal(t, float64(200), s.CategoryByID(20).Totals.OtherActivity)
+	assert.Nil(t, s.CategoryByID(999))
+
+	var nilSummary *BudgetSummary
+	assert.Nil(t, nilSummary.CategoryByID(10))
+	assert.Nil(t, nilSummary.CategoryMap())
+
+	m := s.CategoryMap()
+	require.Len(t, m, 2)
+	assert.Equal(t, float64(100), m[10].Totals.OtherActivity)
+	assert.Equal(t, float64(200), m[20].Totals.OtherActivity)
+}

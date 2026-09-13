@@ -117,4 +117,124 @@ func TestGetRecurringItems(t *testing.T) {
 	amount, err := got[0].ParsedAmount()
 	require.NoError(t, err)
 	assert.Equal(t, int64(125084), amount.Amount())
+
+	monthly, err := got[0].MonthlyAmount()
+	require.NoError(t, err)
+	assert.Equal(t, 1250.84, monthly)
+}
+
+func TestRecurringCriteria_MonthlyFactorAndCadence(t *testing.T) {
+	tests := []struct {
+		name        string
+		granularity string
+		quantity    int64
+		wantFactor  float64
+		wantCadence string
+		wantOk      bool
+	}{
+		{
+			name:        "monthly",
+			granularity: "month",
+			quantity:    1,
+			wantFactor:  1.0,
+			wantCadence: "monthly",
+			wantOk:      true,
+		},
+		{
+			name:        "quarterly",
+			granularity: "month",
+			quantity:    3,
+			wantFactor:  1.0 / 3.0,
+			wantCadence: "every 3 months",
+			wantOk:      true,
+		},
+		{
+			name:        "weekly",
+			granularity: "week",
+			quantity:    1,
+			wantFactor:  52.0 / 12.0,
+			wantCadence: "weekly",
+			wantOk:      true,
+		},
+		{
+			name:        "biweekly",
+			granularity: "week",
+			quantity:    2,
+			wantFactor:  26.0 / 12.0,
+			wantCadence: "every 2 weeks",
+			wantOk:      true,
+		},
+		{
+			name:        "yearly",
+			granularity: "year",
+			quantity:    1,
+			wantFactor:  1.0 / 12.0,
+			wantCadence: "yearly",
+			wantOk:      true,
+		},
+		{
+			name:        "daily",
+			granularity: "day",
+			quantity:    1,
+			wantFactor:  365.0 / 12.0,
+			wantCadence: "daily",
+			wantOk:      true,
+		},
+		{
+			name:        "invalid quantity",
+			granularity: "month",
+			quantity:    0,
+			wantFactor:  0,
+			wantCadence: "every 0 months",
+			wantOk:      false,
+		},
+		{
+			name:        "unknown granularity",
+			granularity: "unknown",
+			quantity:    1,
+			wantFactor:  0,
+			wantCadence: "unknown",
+			wantOk:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			crit := RecurringCriteria{
+				Granularity: tt.granularity,
+				Quantity:    tt.quantity,
+			}
+			factor, ok := crit.MonthlyFactor()
+			assert.Equal(t, tt.wantOk, ok)
+			if tt.wantOk {
+				assert.InDelta(t, tt.wantFactor, factor, 0.0001)
+			}
+			assert.Equal(t, tt.wantCadence, crit.Cadence())
+		})
+	}
+}
+
+func TestRecurringItem_MonthlyAmount(t *testing.T) {
+	item := &RecurringItem{
+		TransactionCriteria: RecurringCriteria{
+			Granularity: "week",
+			Quantity:    2,
+			Amount:      "100.0000",
+		},
+	}
+
+	monthly, err := item.MonthlyAmount()
+	require.NoError(t, err)
+	// 100 * (26 / 12) = 216.67
+	assert.Equal(t, 216.67, monthly)
+
+	invalid := &RecurringItem{
+		TransactionCriteria: RecurringCriteria{
+			Granularity: "unknown",
+			Quantity:    1,
+			Amount:      "100.0000",
+		},
+	}
+	_, err = invalid.MonthlyAmount()
+	require.Error(t, err)
 }

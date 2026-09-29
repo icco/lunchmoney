@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/icco/lunchmoney"
+	"go.icco.me/lunchmoney"
 )
 
 func main() {

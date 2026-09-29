@@ -4,7 +4,7 @@ Guidance for coding agents working on lunchmoney.
 
 ## Project Overview
 
-Go client library for the Lunch Money personal finance developer API (`github.com/icco/lunchmoney`).
+Go client library for the Lunch Money personal finance developer API (`go.icco.me/lunchmoney`).
 
 ## Commands
 

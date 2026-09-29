@@ -1,12 +1,12 @@
 # lunchmoney
 
-[![GoDoc](https://godoc.org/github.com/icco/lunchmoney?status.svg)](https://godoc.org/github.com/icco/lunchmoney)
+[![GoDoc](https://pkg.go.dev/badge/go.icco.me/lunchmoney.svg)](https://pkg.go.dev/go.icco.me/lunchmoney)
 [![Go Report Card](https://goreportcard.com/badge/github.com/icco/lunchmoney)](https://goreportcard.com/report/github.com/icco/lunchmoney)
 
 Go client for the [Lunch Money v2 API](https://alpha.lunchmoney.dev/introduction).
 
 ```sh
-go get github.com/icco/lunchmoney
+go get go.icco.me/lunchmoney
 ```
 
 ## Usage
@@ -33,7 +33,7 @@ for _, t := range resp.Transactions {
 }
 ```
 
-Runnable examples are in [examples/](examples). Full API docs are on [GoDoc](https://godoc.org/github.com/icco/lunchmoney).
+Runnable examples are in [examples/](examples). Full API docs are on [GoDoc](https://pkg.go.dev/go.icco.me/lunchmoney).
 
 ## Notes
 

@@ -21,7 +21,7 @@ const (
 	BaseAPIURL = "https://api.lunchmoney.dev/v2/"
 
 	// userAgent identifies this library to the API.
-	userAgent = "github.com/icco/lunchmoney"
+	userAgent = "go.icco.me/lunchmoney"
 
 	// queryStartDate and queryEndDate name the date range query parameters
 	// that several endpoints share.
